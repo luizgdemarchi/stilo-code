@@ -17,7 +17,7 @@ Legenda: ✅ verificado · 🕐 mecanismo verificado, falta a confirmação em s
 
 | # | Critério | Situação |
 |---|---|---|
-| 1 | Instala no Claude Code sem erro | ✅ pelo caminho local; pelo GitHub só depois do Passo 15 |
+| 1 | Instala no Claude Code sem erro | ✅ pelo caminho local **e** pelo GitHub |
 | 2 | Pasta sem `.stilo/` entra em `BRAINSTORM`, não em implementação | ✅ mecanismo · 🕐 comportamento |
 | 3 | Sessão nova com `phase: "PLAN"` reporta fase e próxima ação sozinha | ✅ |
 | 4 | `/clear` no meio e o agente retoma na fase certa | ✅ mecanismo · 🕐 comportamento |
@@ -36,6 +36,17 @@ Legenda: ✅ verificado · 🕐 mecanismo verificado, falta a confirmação em s
 
 **1 — instalação.** Saída do `claude plugin details` acima: as 2 skills e os 3 hooks
 foram reconhecidos, e os manifestos parseiam (`tests/manifestos.test.js`).
+
+Repetido a partir do GitHub, num diretório temporário, com o marketplace local removido
+antes:
+
+```
+claude plugin marketplace add luizgdemarchi/stilo-code   → Successfully added marketplace
+claude plugin install stilo-code@stilo-code              → Successfully installed (scope: user)
+claude plugin details stilo-code@stilo-code             → Skills (2) · Hooks (3)
+```
+
+O hook rodando a partir desse cache reporta o estado corretamente.
 
 **2 — projeto novo.** `stilo-activate.js` num diretório sem `.stilo/` emite o ruleset
 inteiro mais o bloco "Nenhum `.stilo/state.json` encontrado… comece em `BRAINSTORM`… não
