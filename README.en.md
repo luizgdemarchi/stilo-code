@@ -1,0 +1,184 @@
+# Stilo Code
+
+The project pipeline that survives `/clear`.
+
+*[Português](README.md) — the source language of this repo.*
+
+## The problem
+
+You have a way of running a project: think first, write the spec, plan, execute, review.
+While that lives only in the agent's memory, three things happen:
+
+1. **It disappears.** One config reset and the workflow stops applying.
+2. **It isn't portable.** It exists inside one agent, on one machine.
+3. **It doesn't survive `/clear`.** Once the context is cleared, the agent forgets which
+   phase the project is in and starts improvising — usually by writing code nobody asked
+   for.
+
+Stilo Code turns that pipeline into a **state machine written to disk**. A six-line file
+per project, read automatically at every session start. After `/clear`, the agent re-reads
+the disk and picks up exactly where it left off.
+
+## The pipeline
+
+```
+BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
+```
+
+| Phase | Model | Durable artifact | Exits when |
+|---|---|---|---|
+| `BRAINSTORM` | deep | *(none)* | you confirm the scope |
+| `SPEC` | deep | `spec.md` | the spec is approved |
+| `PLAN` | deep | `plan.md` | the plan has verifiable steps |
+| `EXECUTE` | **fast** | the code | every step done and verified |
+| `REVIEW` | deep | `.stilo/review-NN.md` | the review is in a file |
+| `FIX` | deep | fixed code | every finding resolved |
+| `DONE` | — | — | review with no critical or high finding |
+
+**Rule 0 — one folder per project.** **Rule 1 — never jump to implementation:** a small
+request still goes through the pipeline, just faster.
+
+State lives in `<project>/.stilo/state.json`:
+
+```json
+{
+  "version": 1,
+  "project": "my-app",
+  "phase": "PLAN",
+  "reviewRound": 0,
+  "enxuto": "auto",
+  "updated": "2026-08-21T20:40:00Z"
+}
+```
+
+(`enxuto` is Portuguese for *lean* — it's the output compression level. See below.)
+
+## Install
+
+### Claude Code
+
+```
+/plugin marketplace add luizgdemarchi/stilo-code
+/plugin install stilo-code@stilo-code
+```
+
+Installs both skills and all three hooks (`SessionStart`, `UserPromptSubmit`,
+`SubagentStart`). This is the full install: state is injected on its own, including right
+after a `/clear`.
+
+### Codex
+
+Same package, same hook manifest. Point Codex at the cloned repo;
+`.codex-plugin/plugin.json` carries the skills and hooks.
+
+### OpenCode
+
+```bash
+git clone https://github.com/luizgdemarchi/stilo-code
+```
+
+In your `opencode.json`:
+
+```json
+{ "plugin": ["/path/to/stilo-code/.opencode/plugins/stilo.mjs"] }
+```
+
+The plugin appends the pipeline to each turn's system prompt and registers `/stilo` and
+`/stilo-off`.
+
+### Gemini CLI / Antigravity
+
+Clone the repo and use `gemini-extension.json`, which points at `AGENTS.md` as the context
+file. Commands come from `commands/stilo.toml` and `commands/stilo-off.toml`.
+
+### Cursor, Windsurf, Cline, Kiro, Qoder
+
+Copy your agent's rule file into your project:
+
+| Agent | File |
+|---|---|
+| Cursor | `.cursor/rules/stilo.mdc` |
+| Windsurf | `.windsurf/rules/stilo.md` |
+| Cline | `.clinerules/stilo.md` |
+| Kiro | `.kiro/steering/stilo.md` |
+| Qoder | `.qoder/rules/stilo.md` |
+| Anything else | `AGENTS.md` at the root |
+
+In those agents the pipeline works without hooks: the ruleset is always in context and the
+agent reads and writes `state.json` itself. Qoder also supports hooks — the template is in
+`hooks/qoder-hooks.json`.
+
+### Without installing anything
+
+Paste `AGENTS.md` into the agent. It is self-sufficient by design: on its own, it runs the
+whole pipeline.
+
+## Commands
+
+| Command | Effect |
+|---|---|
+| `/stilo` | Starts a new project or resumes the active one, reporting phase and next action |
+| `/stilo <name>` | Creates the `<name>/` subfolder and enters `BRAINSTORM` |
+| `/stilo enxuto off\|leve\|pleno\|auto` | Adjusts output compression |
+| `/stilo-off` | Turns the pipeline off globally until the next `/stilo` |
+
+There is no phase-advance command: the agent advances when it finishes a phase.
+
+## Lean Mode (`enxuto`)
+
+Same technical content, fewer tokens. It's an output style rule — no proxy, no runtime,
+nothing intercepted, which is what keeps the package portable.
+
+```
+before: Great question! I ran the tests and I'm happy to report that the vast
+        majority passed. There were 47 tests in total, of which 46 passed and
+        only 1 failed. The failing test was `test_retry_backoff`, and the full
+        error message was: `AssertionError: expected 3 retries, got 2`.
+
+after:  46/47. `test_retry_backoff`: `AssertionError: expected 3 retries, got 2`.
+```
+
+Note what did **not** change: the numbers, the symbol name and the literal error message.
+Negations, numbers, versions, code blocks and error messages are safety locks — compression
+never touches them.
+
+The level comes from the phase: `off` in `BRAINSTORM`, `leve` (light) in `SPEC` and `PLAN`,
+`pleno` (full) in `EXECUTE`, `REVIEW` and `FIX`. `/stilo enxuto <level>` overrides and
+persists.
+
+## Companions
+
+None is required. **The pipeline completes end to end with zero companions installed** —
+every phase carries its own instructions, and detection is silent: no error, no warning, no
+prompt to install.
+
+| Companion | Where it helps |
+|---|---|
+| `superpowers` | `BRAINSTORM`, `PLAN`, `EXECUTE` |
+| `ponytail` | `EXECUTE`, `FIX` — keeps the diff minimal |
+| `context7` (MCP) | `SPEC`, `PLAN` — up-to-date library docs |
+| `playwright` (MCP) | `EXECUTE`, `REVIEW` — verify in a real browser |
+
+Only packages that install in nearly every agent make this list: an MCP server, or a repo
+shipping multi-agent adapters. A tool tied to a single agent creates a pipeline that breaks
+when you switch tools — the very problem this package exists to solve.
+
+## Language
+
+The source is entirely in Portuguese. The ruleset instructs the agent to **reply in the
+language you write in** — write in English, get English back.
+
+## Development
+
+```bash
+npm test          # node --test, zero dependencies
+npm run sync      # regenerates the adapters from AGENTS.md
+node scripts/sync-adapters.js --check   # fails if any adapter drifted
+```
+
+`AGENTS.md` is the single source of truth for the ruleset. The six per-agent rule files are
+generated, never hand-edited — a test fails if they drift.
+
+## License
+
+MIT © Luiz Gabriel De Marchi Nascimento

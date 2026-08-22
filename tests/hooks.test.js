@@ -247,3 +247,31 @@ test('no Qoder o UserPromptSubmit carrega o ruleset inteiro', () => {
   const saida = JSON.parse(r.stdout);
   assert.match(saida.hookSpecificOutput.additionalContext, /Stilo Code — pipeline de projeto/);
 });
+
+test('cwd inválido no payload cai no cwd do processo', () => {
+  // Achado do passo 13: um caminho estilo POSIX vindo do agente resolvia para
+  // um diretório inexistente e o projeto sumia silenciosamente.
+  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: 'oi', cwd: '/nao/existe/em/lugar/nenhum' }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /fase=PLAN/);
+});
+
+test('/stilo enxuto grava mesmo com cwd inválido no payload', () => {
+  const c = cenario({ version: 1, project: 'meu-app', phase: 'BRAINSTORM', enxuto: 'auto' });
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo enxuto pleno', cwd: '/nao/existe' }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'pleno');
+});

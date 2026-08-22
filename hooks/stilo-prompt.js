@@ -8,7 +8,21 @@
 // Os hooks gravam só o que precisa de efeito imediato — desligar e o nível de
 // enxuto. Transição de fase é do agente: só ele sabe que uma fase acabou.
 
+const fs = require('fs');
+
 const NIVEIS_ENXUTO = ['off', 'leve', 'pleno', 'auto'];
+
+// O `cwd` do payload vem do agente e nem sempre é um caminho válido para este
+// runtime (um caminho estilo POSIX num Node de Windows, por exemplo). Só use o
+// que existe em disco; o process.cwd() do hook é o da sessão de qualquer jeito.
+function diretorio(data) {
+  try {
+    if (data.cwd && fs.statSync(data.cwd).isDirectory()) return data.cwd;
+  } catch (e) {
+    // Caminho inválido ou inacessível — cai no cwd do próprio processo.
+  }
+  return process.cwd();
+}
 
 // Aceita /stilo, @stilo, $stilo e a forma com namespace de plugin
 // (/stilo-code:stilo), que é como o Claude Code expõe o comando.
@@ -30,7 +44,7 @@ function main(data) {
     require('./stilo-instructions.js');
   const { isQoder, writeHookOutput } = require('./stilo-runtime.js');
 
-  const cwd = data.cwd || process.cwd();
+  const cwd = diretorio(data);
   const comando = parseComando(data.prompt);
 
   if (comando && comando.nome === 'stilo-off') {
