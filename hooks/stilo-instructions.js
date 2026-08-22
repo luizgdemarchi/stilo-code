@@ -45,6 +45,18 @@ function lerArquivo(...partes) {
   }
 }
 
+// Todo valor lido do state.json vira texto injetado no contexto do modelo, e o
+// arquivo pode ter vindo junto num repositório clonado — é entrada de fora do
+// sistema. Colapsa espaço em branco (uma quebra de linha viraria uma instrução
+// solta no meio da injeção) e trunca.
+function sanitiza(valor, limite) {
+  const texto = String(valor === undefined || valor === null ? '' : valor)
+    .replace(/\s+/g, ' ')
+    .trim();
+  const max = limite || 120;
+  return texto.length > max ? texto.slice(0, max) + '…' : texto;
+}
+
 function fase(state) {
   return normalizeFase(state && state.phase) || 'BRAINSTORM';
 }
@@ -54,7 +66,7 @@ function fase(state) {
 // a fazer perguntas de escopo — errado, e sem nenhum sinal do erro de digitação.
 function faseInvalida(state) {
   if (!state || !state.phase) return null;
-  return normalizeFase(state.phase) ? null : String(state.phase);
+  return normalizeFase(state.phase) ? null : sanitiza(state.phase);
 }
 
 // Módulos que o hook injeta sozinho. frontend.md e autoria-skill.md ficam de
@@ -81,7 +93,7 @@ function buildStateLine(state, caminhos) {
     return `stilo: fase inválida no state.json: "${invalida}" · próxima: peça ao usuário a fase correta antes de agir`;
   }
   const f = fase(state);
-  const nome = String(state.project || 'sem-nome');
+  const nome = sanitiza(state.project) || 'sem-nome';
   return `stilo: projeto=${nome} · fase=${f} · enxuto=${resolveEnxuto(state)} · próxima: ${PROXIMA_ACAO[f]}`;
 }
 
@@ -110,7 +122,7 @@ function blocoEstado(state, caminhos) {
     return [
       '## Estado do Stilo Code',
       '',
-      `- **Projeto:** ${state.project || 'sem-nome'}`,
+      `- **Projeto:** ${sanitiza(state.project) || 'sem-nome'}`,
       `- **Fase:** valor inválido no \`state.json\`: \`"${invalida}"\``,
       '',
       'Fases válidas: `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `DONE`.',
@@ -123,7 +135,7 @@ function blocoEstado(state, caminhos) {
   const linhas = [
     '## Estado do Stilo Code',
     '',
-    `- **Projeto:** ${state.project || 'sem-nome'}`,
+    `- **Projeto:** ${sanitiza(state.project) || 'sem-nome'}`,
     `- **Fase:** ${f}`,
     `- **Próxima ação:** ${PROXIMA_ACAO[f]}`,
     `- **Modelo alvo:** ${MODELO_ALVO[f]}`,
@@ -137,7 +149,7 @@ function blocoEstado(state, caminhos) {
         : `- **Rodada de review:** corrigir os achados de \`.stilo/review-${String(rodada).padStart(2, '0')}.md\``
     );
   }
-  if (state.updated) linhas.push(`- **Atualizado em:** ${state.updated}`);
+  if (state.updated) linhas.push(`- **Atualizado em:** ${sanitiza(state.updated, 40)}`);
   linhas.push('');
   linhas.push(
     'Ao concluir esta fase, grave você mesmo a fase seguinte em `.stilo/state.json`.'
@@ -160,7 +172,7 @@ function buildFullContext(state, caminhos) {
 function buildAmbiguityNote(caminhos) {
   return [
     'stilo: mais de um projeto encontrado a partir do diretório atual:',
-    ...caminhos.map((c) => `  - ${c}`),
+    ...caminhos.map((c) => `  - ${sanitiza(c, 200)}`),
     'Pergunte ao usuário qual deles é o projeto desta conversa antes de agir.',
   ].join('\n');
 }

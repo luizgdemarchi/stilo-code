@@ -140,6 +140,12 @@ function writeState(statePath, state) {
     fs.renameSync(temporario, statePath);
     return completo;
   } catch (e) {
+    // Rename falhou: nao deixar o temporario ao lado do arquivo bom.
+    try {
+      fs.unlinkSync(statePath + '.tmp');
+    } catch (e2) {
+      // Best-effort.
+    }
     return null;
   }
 }
