@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "stilo-code",
+  "description": "O pipeline de projeto que sobrevive ao /clear.",
+  "owner": {
+    "name": "luizgdemarchi",
+    "url": "https://github.com/luizgdemarchi"
+  },
+  "plugins": [
+    {
+      "name": "stilo-code",
+      "description": "Brainstorm, spec, plano, execução e review como máquina de estados em disco. Qualquer agente, qualquer máquina, inclusive logo após um /clear.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

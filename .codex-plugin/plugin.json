@@ -1,0 +1,30 @@
+{
+  "name": "stilo-code",
+  "version": "0.1.0",
+  "description": "Pipeline de projeto como máquina de estados persistida em disco: brainstorm, spec, plano, execução e review sobrevivem ao /clear e a troca de agente.",
+  "author": {
+    "name": "Luiz Gabriel De Marchi Nascimento",
+    "url": "https://github.com/luizgdemarchi"
+  },
+  "homepage": "https://github.com/luizgdemarchi/stilo-code",
+  "repository": "https://github.com/luizgdemarchi/stilo-code",
+  "license": "MIT",
+  "keywords": ["pipeline", "workflow", "spec", "review", "estado"],
+  "skills": "./skills/",
+  "hooks": "./hooks/claude-codex-hooks.json",
+  "interface": {
+    "displayName": "Stilo Code",
+    "shortDescription": "O pipeline de projeto que sobrevive ao /clear",
+    "longDescription": "Impõe brainstorm → spec → plano → execução → review ⇄ fix como uma máquina de estados gravada em .stilo/state.json, para que qualquer agente retome o projeto na fase certa.",
+    "developerName": "Luiz Gabriel De Marchi Nascimento",
+    "category": "Productivity",
+    "capabilities": ["Instructions", "Lifecycle hooks"],
+    "websiteURL": "https://github.com/luizgdemarchi/stilo-code",
+    "defaultPrompt": [
+      "Quero começar um projeto novo.",
+      "Em que fase o projeto está?",
+      "Retoma o projeto de onde parei."
+    ],
+    "brandColor": "#1F2933"
+  }
+}
