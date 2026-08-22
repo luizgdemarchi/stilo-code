@@ -1,0 +1,16 @@
+{
+  "name": "stilo-code",
+  "version": "0.1.0",
+  "description": "Pipeline de projeto como máquina de estados persistida em disco, multi-agente.",
+  "license": "MIT",
+  "private": false,
+  "author": "Luiz Gabriel De Marchi Nascimento",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luizgdemarchi/stilo-code.git"
+  },
+  "scripts": {
+    "test": "node --test tests/",
+    "sync": "node scripts/sync-adapters.js"
+  }
+}
