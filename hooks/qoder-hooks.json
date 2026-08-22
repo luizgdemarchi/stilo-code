@@ -1,0 +1,26 @@
+{
+  "_comment": "Template de referência — copie o objeto 'hooks' para o seu .qoder/settings.json ou ~/.qoder/settings.json e troque STILO_DIR pelo caminho do checkout do stilo-code. O Qoder não tem SessionStart: o UserPromptSubmit faz o papel duplo, e o subagente entra por PreToolUse no matcher de task.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node STILO_DIR/hooks/stilo-prompt.js"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "task|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node STILO_DIR/hooks/stilo-subagent.js"
+          }
+        ]
+      }
+    ]
+  }
+}
