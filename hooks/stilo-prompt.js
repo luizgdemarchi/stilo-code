@@ -76,7 +76,16 @@ function main(data) {
         );
         return;
       }
-      const atual = readState(statePath) || {};
+      // Arquivo ilegível nunca é sobrescrito: gravar por cima apagaria project e
+      // phase, que são o único registro durável de onde o projeto está.
+      const atual = readState(statePath);
+      if (!atual) {
+        writeHookOutput(
+          'UserPromptSubmit',
+          `stilo: ${statePath} está ilegível (JSON inválido). Não gravei nada — conserte o arquivo e repita o comando.`
+        );
+        return;
+      }
       const novo = writeState(statePath, Object.assign({}, atual, { enxuto: nivel }));
       if (!novo) {
         writeHookOutput('UserPromptSubmit', `stilo: não consegui gravar ${statePath}.`);
@@ -92,24 +101,18 @@ function main(data) {
     // /stilo puro: a sessão pode ter começado desligada, então vai o ruleset
     // inteiro, não só a linha de estado.
     const { state, caminhos } = resolveProjeto(cwd);
-    let contexto = buildFullContext(state);
-    if (caminhos.length > 1) contexto += '\n\n---\n\n' + buildAmbiguityNote(caminhos);
-    writeHookOutput('UserPromptSubmit', contexto);
+    writeHookOutput('UserPromptSubmit', buildFullContext(state, caminhos));
     return;
   }
 
   if (isOff()) return;
 
   const { state, caminhos } = resolveProjeto(cwd);
-  if (caminhos.length > 1) {
-    writeHookOutput('UserPromptSubmit', buildAmbiguityNote(caminhos));
-    return;
-  }
   // O Qoder não tem SessionStart, então aqui é o único lugar por onde o ruleset
   // entra — nele o UserPromptSubmit faz papel duplo (contrato § 2).
   writeHookOutput(
     'UserPromptSubmit',
-    isQoder ? buildFullContext(state) : buildStateLine(state)
+    isQoder ? buildFullContext(state, caminhos) : buildStateLine(state, caminhos)
   );
 }
 

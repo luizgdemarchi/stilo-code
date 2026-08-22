@@ -15,6 +15,7 @@ Quando `enxuto` é `auto` no `.stilo/state.json`:
 | `BRAINSTORM` | `off` |
 | `SPEC`, `PLAN` | `leve` |
 | `EXECUTE`, `REVIEW`, `FIX` | `pleno` |
+| `DONE` | `off` |
 
 Um valor explícito no `state.json` sobrepõe a tabela inteira e persiste entre sessões.
 

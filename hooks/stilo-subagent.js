@@ -10,16 +10,14 @@
 
 try {
   const { isOff, resolveProjeto } = require('./stilo-state.js');
-  const { buildAmbiguityNote, buildFullContext } = require('./stilo-instructions.js');
+  const { buildFullContext } = require('./stilo-instructions.js');
   const { writeHookOutput } = require('./stilo-runtime.js');
 
   if (isOff()) process.exit(0);
 
   const { state, caminhos } = resolveProjeto(process.cwd());
-  let contexto = buildFullContext(state);
-  if (caminhos.length > 1) contexto += '\n\n---\n\n' + buildAmbiguityNote(caminhos);
 
-  writeHookOutput('SubagentStart', contexto);
+  writeHookOutput('SubagentStart', buildFullContext(state, caminhos));
 } catch (e) {
   // Melhor esforço.
 }

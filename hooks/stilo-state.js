@@ -133,7 +133,11 @@ function writeState(statePath, state) {
       updated: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     });
     fs.mkdirSync(path.dirname(statePath), { recursive: true });
-    fs.writeFileSync(statePath, JSON.stringify(completo, null, 2) + '\n', 'utf8');
+    // Grava ao lado e renomeia: writeFileSync trunca antes de escrever, e uma
+    // queda no meio deixaria o state.json pela metade — perdendo a fase.
+    const temporario = statePath + '.tmp';
+    fs.writeFileSync(temporario, JSON.stringify(completo, null, 2) + '\n', 'utf8');
+    fs.renameSync(temporario, statePath);
     return completo;
   } catch (e) {
     return null;

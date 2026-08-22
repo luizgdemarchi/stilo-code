@@ -18,7 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // relativo a este arquivo, não ao cwd, porque o OpenCode roda de um checkout.
 const require = createRequire(import.meta.url);
 const { isOff, resolveProjeto } = require('../../hooks/stilo-state.js');
-const { buildAmbiguityNote, buildFullContext } = require('../../hooks/stilo-instructions.js');
+const { buildFullContext } = require('../../hooks/stilo-instructions.js');
 
 // Frontmatter dos arquivos de comando: description entre --- e o resto é o
 // template. Duas linhas de parser bastam para o formato que nós mesmos geramos.
@@ -59,8 +59,7 @@ export default async () => {
       try {
         if (isOff()) return;
         const { state, caminhos } = resolveProjeto(process.cwd());
-        let contexto = buildFullContext(state);
-        if (caminhos.length > 1) contexto += '\n\n---\n\n' + buildAmbiguityNote(caminhos);
+        const contexto = buildFullContext(state, caminhos);
         if (saida.system.length > 0) saida.system[saida.system.length - 1] += '\n\n' + contexto;
         else saida.system.push(contexto);
       } catch (e) {

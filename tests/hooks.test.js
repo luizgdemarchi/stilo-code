@@ -275,3 +275,76 @@ test('/stilo enxuto grava mesmo com cwd inválido no payload', () => {
   assert.strictEqual(r.status, 0);
   assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'pleno');
 });
+
+test('/stilo enxuto não sobrescreve um state.json ilegível', () => {
+  // Review 01, achado 1: gravar por cima apagava project e phase.
+  const c = cenario('{ "project": "meu-app", "phase": "EXECUTE"  <<<corrompido');
+  const antes = fs.readFileSync(c.statePath, 'utf8');
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo enxuto pleno', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /ilegível/);
+  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), antes);
+});
+
+test('fase inválida é reportada, não trocada por BRAINSTORM', () => {
+  // Review 01, achado 2.
+  const c = cenario({ version: 1, project: 'meu-app', phase: 'EXECUTANDO' });
+
+  const linha = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: 'oi', cwd: c.projeto }),
+  });
+  assert.match(linha.stdout, /fase inválida/);
+  assert.match(linha.stdout, /EXECUTANDO/);
+  assert.strictEqual(/fase=BRAINSTORM/.test(linha.stdout), false);
+
+  const sessao = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home });
+  assert.match(sessao.stdout, /valor inválido no `state\.json`/);
+  assert.match(sessao.stdout, /EXECUTANDO/);
+  assert.match(sessao.stdout, /não recomece o projeto/);
+});
+
+test('com dois projetos o contexto não manda criar um terceiro', () => {
+  // Review 01, achado 3: "nenhum encontrado" e "mais de um" na mesma injeção.
+  const raiz = tmpdir();
+  for (const nome of ['app-a', 'app-b']) {
+    const dir = path.join(raiz, nome, '.stilo');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ phase: 'PLAN' }));
+  }
+  const home = path.join(raiz, 'home-stilo');
+
+  const sessao = rodaHook('stilo-activate.js', { cwd: raiz, home });
+  assert.match(sessao.stdout, /mais de um projeto encontrado/);
+  assert.strictEqual(/Nenhum `\.stilo\/state\.json` encontrado/.test(sessao.stdout), false);
+  assert.strictEqual(/Se o usuário pedir um projeto novo/.test(sessao.stdout), false);
+
+  const linha = rodaHook('stilo-prompt.js', {
+    cwd: raiz,
+    home,
+    stdin: JSON.stringify({ prompt: 'oi', cwd: raiz }),
+  });
+  assert.strictEqual(linha.stdout.includes('\n'), false);
+  assert.match(linha.stdout, /2 projetos encontrados/);
+});
+
+test('writeState não deixa o state.json truncado nem lixo temporário', () => {
+  // Review 01, achado 4: grava ao lado e renomeia.
+  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
+
+  rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo enxuto leve', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'leve');
+  assert.strictEqual(fs.existsSync(c.statePath + '.tmp'), false);
+});

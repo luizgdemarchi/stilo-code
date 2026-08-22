@@ -49,6 +49,14 @@ function fase(state) {
   return normalizeFase(state && state.phase) || 'BRAINSTORM';
 }
 
+// Fase presente no arquivo mas fora da lista. Cair no default silenciosamente
+// faria um projeto em EXECUTE ser reportado como BRAINSTORM, e o agente voltaria
+// a fazer perguntas de escopo — errado, e sem nenhum sinal do erro de digitação.
+function faseInvalida(state) {
+  if (!state || !state.phase) return null;
+  return normalizeFase(state.phase) ? null : String(state.phase);
+}
+
 // Módulos que o hook injeta sozinho. frontend.md e autoria-skill.md ficam de
 // fora de propósito: o gatilho deles depende do que o diff toca e do que o
 // projeto é, coisas que só o agente sabe. O AGENTS.md § 5 diz quando lê-los.
@@ -61,16 +69,30 @@ function modulosDaFase(state) {
 
 // Uma linha, para o UserPromptSubmit — barato o bastante para repetir a cada
 // mensagem, que é o que impede o agente de esquecer a fase no meio da conversa.
-function buildStateLine(state) {
+function buildStateLine(state, caminhos) {
+  if (caminhos && caminhos.length > 1) {
+    return `stilo: ${caminhos.length} projetos encontrados a partir do diretório atual — pergunte ao usuário qual é o desta conversa antes de agir`;
+  }
   if (!state) {
     return 'stilo: nenhum projeto ativo · próxima: criar a subpasta do projeto e começar em BRAINSTORM';
+  }
+  const invalida = faseInvalida(state);
+  if (invalida) {
+    return `stilo: fase inválida no state.json: "${invalida}" · próxima: peça ao usuário a fase correta antes de agir`;
   }
   const f = fase(state);
   const nome = String(state.project || 'sem-nome');
   return `stilo: projeto=${nome} · fase=${f} · enxuto=${resolveEnxuto(state)} · próxima: ${PROXIMA_ACAO[f]}`;
 }
 
-function blocoEstado(state) {
+function blocoEstado(state, caminhos) {
+  // Ambiguidade sozinha: emitir também o bloco de "nenhum encontrado" seria uma
+  // contradição, e a instrução de criar projeto novo é a ação errada num
+  // workspace que já tem dois.
+  if (caminhos && caminhos.length > 1) {
+    return ['## Estado do Stilo Code', '', buildAmbiguityNote(caminhos)].join('\n');
+  }
+
   if (!state) {
     return [
       '## Estado do Stilo Code',
@@ -80,6 +102,20 @@ function blocoEstado(state) {
       'Se o usuário pedir um projeto novo: crie a subpasta dele, crie',
       '`<subpasta>/.stilo/state.json` em `phase: "BRAINSTORM"` (com `reviewRound: 0` e',
       '`enxuto: "auto"`) e comece pelas perguntas. Não pule para a implementação.',
+    ].join('\n');
+  }
+
+  const invalida = faseInvalida(state);
+  if (invalida) {
+    return [
+      '## Estado do Stilo Code',
+      '',
+      `- **Projeto:** ${state.project || 'sem-nome'}`,
+      `- **Fase:** valor inválido no \`state.json\`: \`"${invalida}"\``,
+      '',
+      'Fases válidas: `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `DONE`.',
+      'Diga isso ao usuário e pergunte em que fase o projeto está antes de agir. Não',
+      'adivinhe a fase, e não recomece o projeto.',
     ].join('\n');
   }
 
@@ -111,8 +147,8 @@ function blocoEstado(state) {
 
 // Contexto completo para SessionStart e SubagentStart: ruleset + estado +
 // módulos que a fase pede.
-function buildFullContext(state) {
-  const partes = [lerArquivo('AGENTS.md'), blocoEstado(state)];
+function buildFullContext(state, caminhos) {
+  const partes = [lerArquivo('AGENTS.md'), blocoEstado(state, caminhos)];
   for (const modulo of modulosDaFase(state)) {
     const texto = lerArquivo('modules', modulo);
     if (texto) partes.push(texto);

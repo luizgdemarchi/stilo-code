@@ -122,6 +122,7 @@ lê.
 | `BRAINSTORM` | `off` | Explorar problema precisa de nuance e pergunta bem formulada |
 | `SPEC`, `PLAN` | `leve` | O documento é lido depois; corta enchimento, mantém frase inteira |
 | `EXECUTE`, `REVIEW`, `FIX` | `pleno` | Fases mecânicas: narração e cortesia são puro custo |
+| `DONE` | `off` | Não há mais trabalho a comprimir |
 
 Um valor explícito (`off`, `leve`, `pleno`) no `state.json` sobrepõe a tabela em todas as
 fases, e persiste entre sessões.
