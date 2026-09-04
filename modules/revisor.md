@@ -31,6 +31,17 @@ A ordem importa: um bug de corretude em código que nem deveria existir é tempo
    passa de qualquer jeito? Teste que só confirma o que o código faz, sem afirmar o que
    ele deveria fazer, não é teste.
 
+## Review multiagente
+
+Quando houver subagentes, o coordenador pode distribuir em paralelo somente as lentes aplicáveis: qualidade
+geral, segurança, tipagem e framework. Cada revisor retorna `arquivo:linha`, gravidade,
+alegação curta e cenário concreto, sem escrever no código.
+
+O coordenador deduplica os retornos, descarta alegações sem cenário concreto ou já
+resolvidas, ordena os achados por gravidade e sintetiza tudo no template existente
+`.stilo/review-NN.md` abaixo. Sem subagentes, faça a revisão única atual, sem erro e sem
+pedir instalação.
+
 ## Formato de um achado
 
 Um achado é acionável ou não é achado. Todo campo abaixo é obrigatório.

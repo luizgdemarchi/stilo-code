@@ -44,14 +44,26 @@ que não dá para verificar rodando algo não é critério, é desejo.
 **PLAN** — escrever `plan.md` com passos numerados. Cada passo pequeno o bastante para ser
 verificado sozinho, listando os arquivos afetados e como confirmar que funcionou. **O
 como.** O plano também registra o que ficou decidido, e essas decisões não se reabrem
-durante a execução.
+durante a execução. Quando houver trabalho independente, o coordenador organiza as tarefas
+em ondas conforme `modules/orquestracao.md`.
 
 **EXECUTE** — seguir o plano na ordem. Não redesenhar durante a execução: se o plano
 estiver errado, parar, dizer isso ao usuário e voltar para `PLAN`. Verificar cada passo
-antes de seguir para o próximo.
+antes de seguir para o próximo. O coordenador aplica as ondas, espera todos os
+implementadores e serializa os commits na ordem do plano. Só libera `REVIEW` depois que
+todos os implementadores terminarem.
+
+### Contrato de tarefas e ondas
+
+Cada tarefa planejada declara `ID`, descrição, especialista, `Files:` com caminhos exatos
+e `Depends-on:`. Tarefas só compartilham uma onda quando não há dependência direta ou
+transitiva e os conjuntos de arquivos são totalmente disjuntos; marcação incerta depende
+de todas as tarefas anteriores e roda em série. Implementadores editam e reportam, mas não
+fazem commit; o coordenador captura `HEAD`, serializa os commits na ordem do plano e só
+depois libera a revisão.
 
 **REVIEW** — revisar o diff contra o `spec.md` e o `plan.md`, carregando
-`modules/revisor.md`. Achados numerados, cada um com arquivo, linha, gravidade
+`modules/revisor.md` e `modules/orquestracao.md`. Achados numerados, cada um com arquivo, linha, gravidade
 (`crítico|alto|médio|baixo`), o que quebra e como corrigir. Sempre gravado em
 `.stilo/review-NN.md`, com `NN` igual a `reviewRound` + 1.
 
@@ -103,6 +115,7 @@ gatilho vale.
 | Módulo | Carregar quando |
 |---|---|
 | `modules/enxuto.md` | Sempre que `enxuto` resolver para `leve` ou `pleno` |
+| `modules/orquestracao.md` | Fase `PLAN`, `EXECUTE` ou `REVIEW` |
 | `modules/revisor.md` | Fase `REVIEW` |
 | `modules/frontend.md` | `EXECUTE` ou `REVIEW`, **e** o diff toca interface de usuário |
 | `modules/autoria-skill.md` | `PLAN` ou `EXECUTE`, **e** o projeto **é** uma skill ou plugin de agente |
@@ -171,6 +184,9 @@ Avise proativamente quando é seguro limpar o contexto — uma linha curta, no f
 Se algum destes estiver instalado, aproveite. Se não estiver, siga com as instruções deste
 arquivo: **sem erro, sem aviso, sem pedir instalação.** O pipeline completa inteiro com
 zero companions.
+
+Sem companions, o coordenador executa as mesmas tarefas em série, sem erro e sem pedir
+instalação.
 
 | Companion | Onde ajuda |
 |---|---|
