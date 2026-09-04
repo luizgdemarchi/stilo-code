@@ -1,5 +1,6 @@
 node_modules/
 *.log
+.worktrees/
 
 # Estado de runtime, por maquina — nunca versionado. O padrao precisa ser
 # `.stilo/*`, nao `.stilo/`: o git nao reabre um arquivo dentro de um diretorio
