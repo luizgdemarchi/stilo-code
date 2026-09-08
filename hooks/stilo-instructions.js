@@ -96,6 +96,21 @@ function buildDoctorReport(diagnostico) {
     const status = { present: 'presente', absent: 'ausente', invalid: 'inválido', unavailable: 'indisponível' }[item.status] || item.status;
     linhas.push(`${nome}: ${status}${item.path ? ` · ${sanitiza(item.path, 200)}` : ''}`);
   }
+  if (diagnostico.cycle && diagnostico.cycle.errors && diagnostico.cycle.errors.length) {
+    linhas.push(`ciclo: ${sanitiza(diagnostico.cycle.errors.join('; '), 300)}`);
+  }
+  for (const documento of (diagnostico.cycle && diagnostico.cycle.documents) || []) {
+    linhas.push(`documento ${sanitiza(documento.name)}: ${documento.status === 'ok' ? 'ok' : documento.status}`);
+  }
+  if (diagnostico.evidence && diagnostico.evidence.errors && diagnostico.evidence.errors.length) {
+    linhas.push(`evidências: ${sanitiza(diagnostico.evidence.errors.join('; '), 300)}`);
+  }
+  if (diagnostico.completion && diagnostico.completion.status === 'pending') {
+    const criterios = diagnostico.completion.criteria.length
+      ? ` · critérios=${sanitiza(diagnostico.completion.criteria.join(', '), 120)}`
+      : '';
+    linhas.push(`DONE: requisito obrigatório pendente${criterios}`);
+  }
   for (const check of diagnostico.checks || []) {
     linhas.push(`artefato ${sanitiza(check.name)}: ${check.status === 'ok' ? 'ok' : check.status}`);
   }

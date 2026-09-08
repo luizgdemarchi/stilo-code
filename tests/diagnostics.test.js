@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { diagnoseProject } = require('../hooks/stilo-diagnostics.js');
+const { diagnoseProject, readCycle, readEvidence } = require('../hooks/stilo-diagnostics.js');
 
 function tmpdir() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-doctor-')));
@@ -92,4 +92,142 @@ test('diagnoseProject propaga state ilegível e ambiguidade', () => {
   const diagnosticoAmbiguo = diagnoseProject(ambiguo);
   assert.strictEqual(diagnosticoAmbiguo.status, 'ambiguous');
   assert.strictEqual(diagnosticoAmbiguo.caminhos.length, 2);
+});
+
+test('diagnoseProject aponta DONE com evidência obrigatória pendente sem alterar arquivos', () => {
+  const raiz = tmpdir();
+  const { projeto, stilo } = criaProjeto(raiz, estado({ phase: 'DONE', reviewRound: 0 }));
+  fs.writeFileSync(path.join(projeto, 'spec.md'), '# Spec\n');
+  fs.writeFileSync(path.join(projeto, 'plan.md'), '# Plano\n');
+  fs.mkdirSync(path.join(projeto, 'docs'));
+  fs.writeFileSync(
+    path.join(projeto, 'docs', 'aceite.md'),
+    [
+      '| Critério | Tarefa | Comando | Tipo | Resultado | Review |',
+      '|---|---|---|---|---|---|',
+      ...Array.from({ length: 15 }, (_, index) => {
+        const criterion = index + 1;
+        const type = criterion === 2 ? 'pendente' : 'local';
+        return `| ${criterion} | T5 | teste ${criterion} | ${type} | resultado ${criterion} | review-05 |`;
+      }),
+      '',
+    ].join('\n')
+  );
+  const statePath = path.join(stilo, 'state.json');
+  const antes = fs.readFileSync(statePath, 'utf8');
+
+  const diagnostico = diagnoseProject(raiz);
+
+  assert.strictEqual(diagnostico.completion.status, 'pending');
+  assert.strictEqual(diagnostico.completion.mandatory, true);
+  assert.deepStrictEqual(diagnostico.completion.criteria, ['2']);
+  assert.match(diagnostico.completion.reason, /evidência obrigatória pendente/i);
+  assert.strictEqual(diagnostico.evidence.criteria.length, 15);
+  assert.deepStrictEqual(diagnostico.evidence.errors, []);
+  assert.strictEqual(fs.readFileSync(statePath, 'utf8'), antes);
+  assert.deepStrictEqual(fs.readdirSync(stilo).sort(), ['state.json']);
+});
+
+test('readEvidence separa tipos e relata linha inválida', () => {
+  const raiz = tmpdir();
+  const arquivo = path.join(raiz, 'aceite.md');
+  fs.writeFileSync(
+    arquivo,
+    [
+      '| Critério | Tarefa | Comando | Tipo | Resultado | Review |',
+      '|---|---|---|---|---|---|',
+      '| 1 | T2 | `node --test` | local | passou | review-05 |',
+      '| 2 | T6 | OpenCode CLI | externo | não executado | review-05 |',
+      '',
+    ].join('\n')
+  );
+
+  const evidence = readEvidence(arquivo);
+
+  assert.strictEqual(evidence.status, 'present');
+  assert.deepStrictEqual(evidence.criteria.map((item) => [item.criterion, item.type]), [['1', 'local']]);
+  assert.deepStrictEqual(evidence.errors, [
+    'linha 4: tipo deve ser local, viva ou pendente',
+    'critérios obrigatórios ausentes: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15',
+  ]);
+});
+
+test('readEvidence exige cobertura única dos 15 critérios e mantém DONE pendente', () => {
+  const raiz = tmpdir();
+  const { projeto } = criaProjeto(raiz, estado({ phase: 'DONE', reviewRound: 0 }));
+  fs.writeFileSync(path.join(projeto, 'spec.md'), '# Spec\n');
+  fs.writeFileSync(path.join(projeto, 'plan.md'), '# Plano\n');
+  fs.mkdirSync(path.join(projeto, 'docs'));
+  fs.writeFileSync(
+    path.join(projeto, 'docs', 'aceite.md'),
+    [
+      '| Critério | Tarefa | Comando | Tipo | Resultado | Review |',
+      '|---|---|---|---|---|---|',
+      '| 1 | T5 | teste local | local | passou | review-05 |',
+      '| 1 | T5 | teste repetido | local | passou | review-05 |',
+      '',
+    ].join('\n')
+  );
+
+  const diagnostico = diagnoseProject(projeto);
+
+  assert.deepStrictEqual(diagnostico.evidence.duplicates, ['1']);
+  assert.deepStrictEqual(diagnostico.evidence.missing, ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15']);
+  assert.match(diagnostico.evidence.errors.join('\n'), /critério duplicado: 1/i);
+  assert.match(diagnostico.evidence.errors.join('\n'), /critérios obrigatórios ausentes: 2, 3, 4/i);
+  assert.strictEqual(diagnostico.completion.status, 'pending');
+  assert.deepStrictEqual(diagnostico.completion.criteria, [...diagnostico.evidence.missing, '1']);
+});
+
+test('docs/aceite registra os 15 critérios e mantém o smoke OpenCode pendente', () => {
+  const evidence = readEvidence(path.join(__dirname, '..', 'docs', 'aceite.md'));
+
+  assert.strictEqual(evidence.criteria.length, 15);
+  assert.deepStrictEqual(evidence.errors, []);
+  const openCode = evidence.criteria.find((criterion) => criterion.criterion === '15');
+  assert.strictEqual(openCode.type, 'pendente');
+  assert.strictEqual(openCode.command, '`OpenCode CLI ausente; smoke test pendente`');
+  assert.strictEqual(openCode.result, '`OpenCode CLI ausente; smoke test pendente`');
+});
+
+test('readCycle tolera campos legados, rejeita id inseguro e diagnóstico lista documentos do ciclo', () => {
+  const raiz = tmpdir();
+  const legadoPath = path.join(raiz, 'legado.json');
+  fs.writeFileSync(legadoPath, '{ "id": "ciclo-legado" }');
+  assert.deepStrictEqual(
+    (({ id, started, baseReview, errors }) => ({ id, started, baseReview, errors }))(readCycle(legadoPath)),
+    {
+      id: 'ciclo-legado',
+      started: null,
+      baseReview: null,
+      errors: ['started ausente ou vazio', 'baseReview ausente ou inválido'],
+    }
+  );
+
+  const inseguroPath = path.join(raiz, 'inseguro.json');
+  fs.writeFileSync(inseguroPath, '{ "id": "../fora", "started": "2026-09-08T00:00:00Z", "baseReview": 4 }');
+  assert.strictEqual(readCycle(inseguroPath).status, 'invalid');
+
+  const { projeto, stilo } = criaProjeto(raiz, estado({ phase: 'REVIEW', reviewRound: 0 }), 'ciclo');
+  fs.writeFileSync(
+    path.join(stilo, 'cycle.json'),
+    '{ "id": "2026-09-07-retomada-confiavel-governanca", "started": "2026-09-08T00:00:00Z", "baseReview": 4 }'
+  );
+  const specDir = path.join(projeto, 'docs', 'superpowers', 'specs');
+  const planDir = path.join(projeto, 'docs', 'superpowers', 'plans');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.mkdirSync(planDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, '2026-09-04-ciclo-anterior-design.md'), '# anterior\n');
+  fs.writeFileSync(path.join(specDir, '2026-09-07-retomada-confiavel-governanca-design.md'), '# atual\n');
+  fs.writeFileSync(path.join(planDir, '2026-09-04-ciclo-anterior-plan.md'), '# anterior\n');
+  fs.writeFileSync(path.join(planDir, '2026-09-07-retomada-confiavel-governanca-plan.md'), '# atual\n');
+
+  const diagnostico = diagnoseProject(projeto);
+
+  assert.deepStrictEqual(
+    diagnostico.cycle.documents.map((document) => [document.name, document.status]),
+    [['spec do ciclo', 'ok'], ['plano do ciclo', 'ok']]
+  );
+  assert.strictEqual(fs.existsSync(path.join(specDir, '2026-09-04-ciclo-anterior-design.md')), true);
+  assert.strictEqual(fs.existsSync(path.join(planDir, '2026-09-04-ciclo-anterior-plan.md')), true);
 });

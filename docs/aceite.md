@@ -1,132 +1,38 @@
-# Critérios de aceite — resultado
+# Critérios de aceite — matriz de evidências
 
-Passo 13 do `plan.md`, contra os 14 critérios do `spec.md` § 12.
+Os 15 critérios de `spec.md` permanecem rastreados. `local` registra uma verificação reproduzível no checkout, `viva` registra execução observada no agente e `pendente` impede que o diagnóstico trate `DONE` como comprovado.
 
-Plugin instalado de verdade a partir do caminho local:
+| Critério | Tarefa | Comando | Tipo | Resultado | Review |
+|---|---|---|---|---|---|
+| 1 | T8 | `claude plugin details stilo-code@stilo-code` | viva | Instalação local e via GitHub reconheceu 2 skills e 3 hooks | review-04 |
+| 2 | T8 | conversa em pasta sem `.stilo` | pendente | Mecanismo local verificado; comportamento vivo ainda não executado | review-04 |
+| 3 | T8 | nova sessão com `phase: PLAN` | viva | Sessão instalada reportou `PLAN` e a próxima ação | review-04 |
+| 4 | T8 | `/clear` durante `PLAN` | pendente | Matcher e releitura do disco verificados; conversa viva ainda não executada | review-04 |
+| 5 | T8 | concluir `SPEC` em conversa viva | pendente | Instrução publicada; gravação, avanço e aviso ainda não observados juntos | review-04 |
+| 6 | T3 | `node --test tests/hooks.test.js` | local | Desligamento e religação, inclusive falhas simuladas, passam | review-04 |
+| 7 | T7 | `node --test tests/manifestos.test.js` | local | Guard sem `node` no PATH permanece coberto | review-04 |
+| 8 | T7 | `node scripts/sync-adapters.js --check` | local | Adaptadores sincronizados no checkout | review-04 |
+| 9 | T7 | `node --test tests/manifestos.test.js` | local | AGENTS.md autossuficiente permanece coberto | review-04 |
+| 10 | T7 | `npm.cmd test` | local | Pipeline sem companion obrigatório permanece coberto | review-04 |
+| 11 | T7 | `node --test tests/instructions.test.js` | local | Módulos carregam conforme a fase | review-04 |
+| 12 | T8 | conversa viva em `EXECUTE` | pendente | Resolução `pleno` verificada; forma da resposta ainda não observada | review-04 |
+| 13 | T3 | `node --test tests/hooks.test.js` | local | Override `enxuto: pleno` persiste sem mudar a fase | review-04 |
+| 14 | T8 | mensagem em inglês numa conversa viva | pendente | Regra publicada; resposta do agente ainda não observada | review-04 |
+| 15 | T6 | `OpenCode CLI ausente; smoke test pendente` | pendente | `OpenCode CLI ausente; smoke test pendente` | review-04 |
 
-```
-claude plugin marketplace add "./"        → Successfully added marketplace: stilo-code
-claude plugin install stilo-code@stilo-code → Successfully installed (scope: user)
-claude plugin details stilo-code@stilo-code → Skills (2) stilo, stilo-off
-                                              Hooks (3) SessionStart, UserPromptSubmit, SubagentStart
-                                              Always-on: ~300 tok
-```
+## Limitações e validações vivas
 
-Legenda: ✅ verificado · 🕐 mecanismo verificado, falta a confirmação em sessão viva
-(depende de comportamento do agente numa conversa real, que não dá para observar de fora).
+Os critérios 2, 4, 5, 12, 14 e 15 continuam pendentes. Os cinco primeiros exigem uma conversa real porque testes de hook provam o contexto injetado, mas não provam que o agente seguirá a instrução. O critério 15 exige o smoke test do OpenCode.
 
-| # | Critério | Situação |
-|---|---|---|
-| 1 | Instala no Claude Code sem erro | ✅ pelo caminho local **e** pelo GitHub |
-| 2 | Pasta sem `.stilo/` entra em `BRAINSTORM`, não em implementação | ✅ mecanismo · 🕐 comportamento |
-| 3 | Sessão nova com `phase: "PLAN"` reporta fase e próxima ação sozinha | ✅ |
-| 4 | `/clear` no meio e o agente retoma na fase certa | ✅ mecanismo · 🕐 comportamento |
-| 5 | Ao terminar `SPEC`: grava `spec.md`, atualiza estado, avisa `/clear` seguro | 🕐 comportamento |
-| 6 | `/stilo-off` para de injetar; `/stilo` religa | ✅ |
-| 7 | Hooks não quebram a sessão sem `node` no PATH | ✅ |
-| 8 | `sync-adapters.js --check` passa | ✅ |
-| 9 | `AGENTS.md` sozinho conduz o pipeline | ✅ |
-| 10 | Pipeline completa com zero companions; nada preso a um agente é citado | ✅ |
-| 11 | Módulos carregam só na fase certa | ✅ |
-| 12 | `EXECUTE` sem narração nem cortesia, com negações e erros intactos | 🕐 comportamento |
-| 13 | `/stilo enxuto pleno` sobrepõe a fase e persiste | ✅ |
-| 14 | Repo em pt-BR; agente responde em inglês para usuário anglófono | ✅ repo · 🕐 resposta |
+O smoke test de OpenCode também permanece pendente. Em 2026-09-08, `node --test tests/opencode-runtime.test.js` registrou literalmente `OpenCode CLI ausente; smoke test pendente`; não há validação viva do hook experimental. O fallback suportado é fornecer o `AGENTS.md` na raiz do projeto.
 
-## Evidência
+GitHub Copilot CLI tem suporte manual por `AGENTS.md`; o pacote não publica manifesto de hooks para o Copilot.
 
-**1 — instalação.** Saída do `claude plugin details` acima: as 2 skills e os 3 hooks
-foram reconhecidos, e os manifestos parseiam (`tests/manifestos.test.js`).
+## Evidência histórica preservada
 
-Repetido a partir do GitHub, num diretório temporário, com o marketplace local removido
-antes:
+- A instalação local e via GitHub retornou `Successfully installed (scope: user)` e reconheceu `Skills (2)` e `Hooks (3)`.
+- O teste de manifestos cobre o matcher `startup|resume|clear|compact` e o guard de PowerShell quando `node` não está no PATH.
+- A suíte cobre persistência de `enxuto`, seleção de módulos e sincronização dos seis adaptadores.
+- Os documentos e reviews de ciclos anteriores permanecem no repositório; `.stilo/cycle.json` apenas seleciona o ciclo atual.
 
-```
-claude plugin marketplace add luizgdemarchi/stilo-code   → Successfully added marketplace
-claude plugin install stilo-code@stilo-code              → Successfully installed (scope: user)
-claude plugin details stilo-code@stilo-code             → Skills (2) · Hooks (3)
-```
-
-O hook rodando a partir desse cache reporta o estado corretamente.
-
-**2 — projeto novo.** `stilo-activate.js` num diretório sem `.stilo/` emite o ruleset
-inteiro mais o bloco "Nenhum `.stilo/state.json` encontrado… comece em `BRAINSTORM`… não
-pule para a implementação". A parte 🕐 é o agente obedecer, o que só aparece numa conversa.
-
-**3 — sessão nova em `PLAN`.** Com o plugin instalado, `CLAUDE_PLUGIN_ROOT` apontando
-para o cache:
-
-```
-- **Fase:** PLAN
-- **Próxima ação:** escrever plan.md com passos verificáveis
-- **Modelo alvo:** profundo
-- **Modo Enxuto:** leve
-```
-
-**4 — `/clear`.** O manifesto declara `"matcher": "startup|resume|clear|compact"` no
-`SessionStart` (verificado em `tests/manifestos.test.js`), e o hook lê o disco a cada
-disparo. O que falta é rodar `/clear` numa conversa real e ver o agente retomar.
-
-**5 — fim de `SPEC`.** Instrução presente em `AGENTS.md` § 2 e § 8, e o bloco de estado
-injetado termina em "Ao concluir esta fase, grave você mesmo a fase seguinte". Verificável
-só numa sessão viva.
-
-**6 — desligar e religar.**
-
-```
-/stilo-off  → STILO OFF — o pipeline para de ser injetado até o próximo /stilo.
-mensagem comum enquanto off → (vazio)
-SessionStart enquanto off   → (vazio)
-/stilo      → # Stilo Code — pipeline de projeto …
-```
-
-**7 — sem `node` no PATH.** O `commandWindows` de cada hook roda o guard
-`if (Get-Command node -ErrorAction SilentlyContinue) { … }`. Executado em PowerShell com
-`PATH=C:\Windows\System32`: saída vazia, sem erro, sem comando nativo executado. O teste
-`tests/manifestos.test.js` falha se algum hook perder o guard.
-
-**8 — adaptadores.** `--check` sai 0 em dia; depois de editar uma linha do `AGENTS.md`
-sai 1 listando os 6 arquivos; depois de `npm run sync` volta a sair 0. Fixado em teste.
-
-**9 — `AGENTS.md` autossuficiente.** As 10 seções exigidas pelo Passo 3 do plano estão
-presentes: Regra 0, Regra 1, as 7 fases, o que fazer em cada fase, o `state.json`, modelo
-por fase, módulos, Modo Enxuto, idioma, aviso de `/clear`, companions e comandos. 8.9 KB.
-
-**10 — zero companions.** Nenhum arquivo publicado cita pacote preso a um único agente —
-teste `nenhum arquivo publicado cita pacote preso a um único agente`, que varre o repo
-inteiro. Nenhum módulo ou hook exige companion para funcionar.
-
-**11 — módulos por fase.** Em `EXECUTE`, o contexto injetado traz `modules/enxuto.md` e
-**não** traz `frontend.md`, `revisor.md` nem `autoria-skill.md` (contagem `grep -c` = 0
-para os três). Em `REVIEW`, traz `revisor.md`.
-
-**12 — Modo Enxuto em `EXECUTE`.** `modules/enxuto.md` entra no contexto com nível
-`pleno` resolvido pela fase. Se a saída obedece é comportamento de conversa.
-
-**13 — `enxuto` persistente.** `/stilo enxuto pleno` em `BRAINSTORM` grava
-`"enxuto": "pleno"` no `state.json` sem mexer na fase, e a sessão seguinte lê `pleno` em
-vez do `off` que a fase daria.
-
-**14 — idioma.** Todo arquivo publicado está em pt-BR. A regra "responda no idioma em que
-o usuário escreveu" está em `AGENTS.md` § 7 e em `modules/enxuto.md`; a resposta em si é
-comportamento.
-
-## Achado corrigido durante este passo
-
-Rodando os hooks com o payload real, `/stilo enxuto pleno` respondeu "nenhum projeto ativo
-aqui" num diretório que **tinha** `.stilo/state.json`: o `cwd` do payload era um caminho
-estilo POSIX que o Node no Windows resolvia para um diretório inexistente, e o hook
-aceitava esse valor sem checar. Corrigido em `hooks/stilo-prompt.js` — o `cwd` do payload
-só é usado quando existe em disco, senão cai no `process.cwd()` do próprio hook, que é o
-da sessão de qualquer forma. Dois testes de regressão em `tests/hooks.test.js`.
-
-## O que falta
-
-Os cinco itens 🕐 dependem de uma conversa real com o plugin instalado. O roteiro mínimo:
-
-1. Numa pasta sem `.stilo/`, pedir um projeto novo → tem que virar subpasta + `BRAINSTORM`.
-2. Levar até `SPEC`, conferir `spec.md` gravado, `state.json` em `PLAN` e o aviso de
-   `/clear` seguro.
-3. Rodar `/clear` e mandar qualquer mensagem → tem que retomar em `PLAN`.
-4. Em `EXECUTE`, conferir que a resposta não tem narração nem cortesia, e que negações,
-   números, blocos de código e mensagens de erro saíram intactos.
-5. Escrever uma mensagem em inglês → a resposta tem que vir em inglês.
+Use [evidencias-template.md](evidencias-template.md) para iniciar a matriz de um novo ciclo sem apagar esta história.
