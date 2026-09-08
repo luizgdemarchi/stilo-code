@@ -168,32 +168,102 @@ function validateState(state) {
 
 // Carimba `updated` na hora de gravar: o agente esquecer o timestamp faz a
 // próxima sessão confiar num estado que não sabe de quando é.
-function writeState(statePath, state) {
+function agoraUtc() {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+function writeJsonAtomic(filePath, value) {
+  const temporario = filePath + `.tmp-${process.pid}-${Date.now()}`;
   try {
-    const completo = Object.assign({ version: 1 }, state, {
-      updated: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
-    });
-    fs.mkdirSync(path.dirname(statePath), { recursive: true });
-    // Grava ao lado e renomeia: writeFileSync trunca antes de escrever, e uma
-    // queda no meio deixaria o state.json pela metade — perdendo a fase.
-    const temporario = statePath + '.tmp';
-    fs.writeFileSync(temporario, JSON.stringify(completo, null, 2) + '\n', 'utf8');
-    fs.renameSync(temporario, statePath);
-    return completo;
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(temporario, JSON.stringify(value, null, 2) + '\n', 'utf8');
+    fs.renameSync(temporario, filePath);
+    return true;
   } catch (e) {
-    // Rename falhou: nao deixar o temporario ao lado do arquivo bom.
     try {
-      fs.unlinkSync(statePath + '.tmp');
+      fs.unlinkSync(temporario);
     } catch (e2) {
-      // Best-effort.
+      // Limpeza best-effort.
     }
-    return null;
+    return false;
   }
+}
+
+function writeState(statePath, state) {
+  const completo = Object.assign({ version: 1 }, state, { updated: agoraUtc() });
+  return writeJsonAtomic(statePath, completo) ? completo : null;
 }
 
 function normalizeFase(fase) {
   const f = String(fase || '').trim().toUpperCase();
   return FASES.includes(f) ? f : null;
+}
+
+function readJsonObject(filePath) {
+  try {
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, ''));
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function listaDeStrings(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function validateCheckpoint(value) {
+  return Boolean(
+    value &&
+      value.version === 1 &&
+      typeof value.cycle === 'string' && value.cycle.trim() &&
+      normalizeFase(value.phase) &&
+      typeof value.task === 'string' && value.task.trim() &&
+      listaDeStrings(value.decisions) &&
+      listaDeStrings(value.verified) &&
+      listaDeStrings(value.pending) &&
+      typeof value.nextAction === 'string' && value.nextAction.trim() &&
+      (value.gitHead === undefined || typeof value.gitHead === 'string') &&
+      typeof value.updated === 'string' && value.updated.trim()
+  );
+}
+
+function readCheckpoint(checkpointPath) {
+  const value = readJsonObject(checkpointPath);
+  return validateCheckpoint(value) ? value : null;
+}
+
+function writeCheckpoint(checkpointPath, checkpoint) {
+  const completo = Object.assign({ version: 1 }, checkpoint, { updated: agoraUtc() });
+  if (!validateCheckpoint(completo)) return null;
+  return writeJsonAtomic(checkpointPath, completo) ? completo : null;
+}
+
+const CICLO_SLUG = /^[a-z0-9][a-z0-9-]{1,48}$/;
+
+function validateCycle(value) {
+  return Boolean(
+    value &&
+      value.version === 1 &&
+      typeof value.id === 'string' && CICLO_SLUG.test(value.id) &&
+      typeof value.started === 'string' && value.started.trim() &&
+      Number.isInteger(value.baseReview) && value.baseReview >= 0 &&
+      typeof value.updated === 'string' && value.updated.trim()
+  );
+}
+
+function readCycle(cyclePath) {
+  const value = readJsonObject(cyclePath);
+  return validateCycle(value) ? value : null;
+}
+
+function writeCycle(cyclePath, cycle) {
+  const timestamp = agoraUtc();
+  const completo = Object.assign({ version: 1, started: timestamp }, cycle, {
+    updated: timestamp,
+  });
+  if (!validateCycle(completo)) return null;
+  return writeJsonAtomic(cyclePath, completo) ? completo : null;
 }
 
 // "auto" (ou qualquer valor inválido) cai na tabela por fase; um nível explícito
@@ -239,6 +309,7 @@ function resolution(status, state, statePath, caminhos, errors = [], error = nul
 }
 
 module.exports = {
+  CICLO_SLUG,
   ENXUTO_POR_FASE,
   FASES,
   NIVEIS,
@@ -246,11 +317,17 @@ module.exports = {
   isOff,
   normalizeFase,
   offFlagPath,
+  readCheckpoint,
+  readCycle,
   readState,
   resolveEnxuto,
   resolveProjeto,
   setOff,
   stiloHome,
+  validateCheckpoint,
+  validateCycle,
   validateState,
+  writeCheckpoint,
+  writeCycle,
   writeState,
 };

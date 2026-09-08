@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { normalizeFase, resolveEnxuto } = require('./stilo-state.js');
+const { normalizeFase, readCheckpoint, resolveEnxuto } = require('./stilo-state.js');
 
 // Próxima ação concreta de cada fase. É o campo que impede o agente de retomar
 // um projeto sabendo a fase mas não o que fazer nela.
@@ -55,6 +55,51 @@ function sanitiza(valor, limite) {
     .trim();
   const max = limite || 120;
   return texto.length > max ? texto.slice(0, max) + '…' : texto;
+}
+
+function checkpointPathFromState(statePath) {
+  return statePath ? path.join(path.dirname(statePath), 'checkpoint.json') : null;
+}
+
+function buildCheckpointNote(statePath, orientarAusente = true) {
+  const checkpointPath = checkpointPathFromState(statePath);
+  if (!checkpointPath) {
+    return 'stilo: nenhum projeto ativo aqui — não há `.stilo/checkpoint.json` para consultar.';
+  }
+  const checkpoint = readCheckpoint(checkpointPath);
+  if (!checkpoint) {
+    if (fs.existsSync(checkpointPath)) {
+      return `stilo: checkpoint inválido ou ilegível em ${sanitiza(checkpointPath, 180)} — não sobrescrevi o arquivo.`;
+    }
+    if (!orientarAusente) return '';
+    return [
+      `stilo: checkpoint ausente em ${sanitiza(checkpointPath, 180)}.`,
+      'Crie um objeto JSON com: version, cycle, phase, task, decisions, verified, pending, nextAction, gitHead opcional e updated.',
+    ].join('\n');
+  }
+  const pendencias = checkpoint.pending.length ? checkpoint.pending.join('; ') : 'nenhuma';
+  return [
+    `stilo: checkpoint · tarefa=${sanitiza(checkpoint.task)} · fase=${sanitiza(checkpoint.phase)}`,
+    `próxima: ${sanitiza(checkpoint.nextAction, 240)}`,
+    `pendências: ${sanitiza(pendencias, 300)}`,
+  ].join('\n');
+}
+
+function buildDoctorReport(diagnostico) {
+  const nomes = { absent: 'ausente', unreadable: 'ilegível', invalid: 'inválido', valid: 'válido', ambiguous: 'ambíguo' };
+  const linhas = [`stilo doctor: state ${nomes[diagnostico.status] || diagnostico.status}`];
+  if (diagnostico.statePath) linhas.push(`state: ${sanitiza(diagnostico.statePath, 200)}`);
+  if (diagnostico.error) linhas.push(`erro: ${sanitiza(diagnostico.error, 240)}`);
+  if (diagnostico.errors && diagnostico.errors.length) linhas.push(`campos: ${sanitiza(diagnostico.errors.join('; '), 300)}`);
+  for (const nome of ['checkpoint', 'cycle', 'evidence']) {
+    const item = diagnostico[nome] || { status: 'unavailable' };
+    const status = { present: 'presente', absent: 'ausente', invalid: 'inválido', unavailable: 'indisponível' }[item.status] || item.status;
+    linhas.push(`${nome}: ${status}${item.path ? ` · ${sanitiza(item.path, 200)}` : ''}`);
+  }
+  for (const check of diagnostico.checks || []) {
+    linhas.push(`artefato ${sanitiza(check.name)}: ${check.status === 'ok' ? 'ok' : check.status}`);
+  }
+  return linhas.join('\n');
 }
 
 function fase(state) {
@@ -218,6 +263,8 @@ function blocoEstado(state, caminhos) {
     );
   }
   if (state.updated) linhas.push(`- **Atualizado em:** ${sanitiza(state.updated, 40)}`);
+  const checkpoint = buildCheckpointNote(caminhos && caminhos.statePath, false);
+  if (checkpoint) linhas.push('', checkpoint);
   linhas.push('');
   linhas.push(
     'Ao concluir esta fase, grave você mesmo a fase seguinte em `.stilo/state.json`.'
@@ -250,6 +297,8 @@ module.exports = {
   MODELO_ALVO,
   PROXIMA_ACAO,
   buildAmbiguityNote,
+  buildCheckpointNote,
+  buildDoctorReport,
   buildFullContext,
   buildStateLine,
   modulosDaFase,

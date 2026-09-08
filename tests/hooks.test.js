@@ -22,7 +22,14 @@ function cenario(state) {
     fs.mkdirSync(path.dirname(statePath), { recursive: true });
     fs.writeFileSync(
       statePath,
-      typeof state === 'string' ? state : JSON.stringify(state)
+      typeof state === 'string'
+        ? state
+        : JSON.stringify(
+            Object.assign(
+              { version: 1, project: 'meu-app', phase: 'PLAN', reviewRound: 0, enxuto: 'auto' },
+              state
+            )
+          )
     );
   } else {
     fs.mkdirSync(projeto, { recursive: true });
@@ -347,4 +354,160 @@ test('writeState não deixa o state.json truncado nem lixo temporário', () => {
 
   assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'leve');
   assert.strictEqual(fs.existsSync(c.statePath + '.tmp'), false);
+});
+
+test('/stilo-off não confirma quando o flag não pode ser gravado', () => {
+  const c = cenario({ phase: 'PLAN' });
+  const flag = path.join(c.home, 'off');
+  fs.mkdirSync(flag, { recursive: true });
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo-off', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.doesNotMatch(r.stdout, /STILO OFF/);
+  assert.match(r.stdout, /não mudou|não consegui/);
+  assert.strictEqual(fs.statSync(flag).isDirectory(), true);
+});
+
+test('/stilo não confirma religação quando o flag não pode ser removido', () => {
+  const c = cenario({ phase: 'PLAN' });
+  const flag = path.join(c.home, 'off');
+  fs.mkdirSync(flag, { recursive: true });
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.doesNotMatch(r.stdout, /Stilo Code — pipeline de projeto/);
+  assert.match(r.stdout, /não mudou|não consegui/);
+  assert.strictEqual(fs.statSync(flag).isDirectory(), true);
+});
+
+test('/stilo checkpoint orienta quando ausente e exibe checkpoint válido', () => {
+  const c = cenario({ phase: 'EXECUTE' });
+
+  const ausente = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo checkpoint', cwd: c.projeto }),
+  });
+  assert.match(ausente.stdout, /checkpoint\.json/);
+  assert.match(ausente.stdout, /decisions/);
+
+  fs.writeFileSync(
+    path.join(c.projeto, '.stilo', 'checkpoint.json'),
+    JSON.stringify({
+      version: 1,
+      cycle: 'retomada',
+      phase: 'EXECUTE',
+      task: 'T3',
+      decisions: ['gravação atômica'],
+      verified: ['T2 concluída'],
+      pending: ['rodar suíte'],
+      nextAction: 'implementar comandos',
+      updated: '2026-09-07T12:00:00Z',
+    })
+  );
+
+  const valido = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo checkpoint', cwd: c.projeto }),
+  });
+  assert.match(valido.stdout, /T3/);
+  assert.match(valido.stdout, /implementar comandos/);
+  assert.match(valido.stdout, /rodar suíte/);
+});
+
+test('/stilo checkpoint não sobrescreve checkpoint corrompido nem state.json', () => {
+  const c = cenario({ phase: 'EXECUTE' });
+  const checkpointPath = path.join(c.projeto, '.stilo', 'checkpoint.json');
+  fs.writeFileSync(checkpointPath, '{ truncado');
+  const stateAntes = fs.readFileSync(c.statePath, 'utf8');
+  const checkpointAntes = fs.readFileSync(checkpointPath, 'utf8');
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo checkpoint', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /inválido|ilegível/);
+  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), stateAntes);
+  assert.strictEqual(fs.readFileSync(checkpointPath, 'utf8'), checkpointAntes);
+});
+
+test('/stilo ciclo grava somente cycle.json e valida o slug', () => {
+  const c = cenario({ phase: 'REVIEW', reviewRound: 4 });
+  const stateAntes = fs.readFileSync(c.statePath, 'utf8');
+
+  const maiusculo = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo ciclo Ab', cwd: c.projeto }),
+  });
+  assert.match(maiusculo.stdout, /slug inválido/);
+
+  const invalido = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo ciclo Inválido!', cwd: c.projeto }),
+  });
+  assert.match(invalido.stdout, /slug inválido/);
+  assert.strictEqual(fs.existsSync(path.join(c.projeto, '.stilo', 'cycle.json')), false);
+
+  const valido = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo ciclo retomada-2026', cwd: c.projeto }),
+  });
+  assert.match(valido.stdout, /retomada-2026/);
+  const ciclo = JSON.parse(fs.readFileSync(path.join(c.projeto, '.stilo', 'cycle.json'), 'utf8'));
+  assert.strictEqual(ciclo.id, 'retomada-2026');
+  assert.strictEqual(ciclo.baseReview, 4);
+  assert.match(ciclo.started, /^\d{4}-\d{2}-\d{2}T/);
+  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), stateAntes);
+});
+
+test('/stilo doctor relata o diagnóstico sem escrever', () => {
+  const c = cenario({ phase: 'EXECUTE' });
+  const antes = fs.readdirSync(path.join(c.projeto, '.stilo')).sort();
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo doctor', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /state.*válido/i);
+  assert.match(r.stdout, /checkpoint.*ausente/i);
+  assert.deepStrictEqual(fs.readdirSync(path.join(c.projeto, '.stilo')).sort(), antes);
+});
+
+test('/stilo doctor preserva o flag global de off', () => {
+  const c = cenario({ phase: 'EXECUTE' });
+  const flag = path.join(c.home, 'off');
+  fs.mkdirSync(c.home, { recursive: true });
+  fs.writeFileSync(flag, '');
+  const antes = fs.readFileSync(flag, 'utf8');
+
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: '/stilo doctor', cwd: c.projeto }),
+  });
+
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /stilo doctor: state válido/i);
+  assert.strictEqual(fs.existsSync(flag), true);
+  assert.strictEqual(fs.readFileSync(flag, 'utf8'), antes);
 });

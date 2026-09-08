@@ -7,11 +7,15 @@ const path = require('node:path');
 const {
   findStateFiles,
   isOff,
+  readCheckpoint,
+  readCycle,
   readState,
   resolveEnxuto,
   resolveProjeto,
   setOff,
   validateState,
+  writeCheckpoint,
+  writeCycle,
   writeState,
 } = require('../hooks/stilo-state.js');
 
@@ -218,4 +222,53 @@ test('isOff e setOff usam o flag em disco', () => {
     if (anterior === undefined) delete process.env.STILO_HOME;
     else process.env.STILO_HOME = anterior;
   }
+});
+
+test('checkpoint usa schema completo, timestamp UTC e gravação atômica', () => {
+  const raiz = tmpdir();
+  const p = path.join(raiz, '.stilo', 'checkpoint.json');
+  const escrito = writeCheckpoint(p, {
+    cycle: 'retomada', phase: 'EXECUTE', task: 'T3', decisions: ['A'],
+    verified: ['B'], pending: ['C'], nextAction: 'continuar',
+  });
+
+  assert.strictEqual(escrito.version, 1);
+  assert.match(escrito.updated, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+  assert.deepStrictEqual(readCheckpoint(p), escrito);
+  assert.strictEqual(fs.existsSync(p + '.tmp'), false);
+});
+
+test('checkpoint inválido ou corrompido não é aceito nem sobrescrito', () => {
+  const raiz = tmpdir();
+  const p = path.join(raiz, '.stilo', 'checkpoint.json');
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, '{ truncado');
+  const antes = fs.readFileSync(p, 'utf8');
+
+  assert.strictEqual(readCheckpoint(p), null);
+  assert.strictEqual(writeCheckpoint(p, { task: 'T3' }), null);
+  assert.strictEqual(fs.readFileSync(p, 'utf8'), antes);
+});
+
+test('ciclo grava id, started e baseReview sem lixo temporário', () => {
+  const raiz = tmpdir();
+  const p = path.join(raiz, '.stilo', 'cycle.json');
+  const escrito = writeCycle(p, { id: 'retomada-2026', baseReview: 4 });
+
+  assert.strictEqual(escrito.id, 'retomada-2026');
+  assert.strictEqual(escrito.baseReview, 4);
+  assert.match(escrito.started, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepStrictEqual(readCycle(p), escrito);
+  assert.strictEqual(fs.existsSync(p + '.tmp'), false);
+});
+
+test('ciclo rejeita slug inválido e leitura corrompida', () => {
+  const raiz = tmpdir();
+  const p = path.join(raiz, '.stilo', 'cycle.json');
+
+  assert.strictEqual(writeCycle(p, { id: 'A!', baseReview: 0 }), null);
+  assert.strictEqual(fs.existsSync(p), false);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, '[]');
+  assert.strictEqual(readCycle(p), null);
 });
