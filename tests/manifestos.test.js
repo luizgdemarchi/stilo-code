@@ -13,6 +13,15 @@ function existe(rel) {
   return fs.existsSync(path.join(RAIZ, rel));
 }
 
+function secaoMarkdown(texto, titulo, nivel) {
+  const marcador = `${'#'.repeat(nivel)} ${titulo}`;
+  const inicio = texto.indexOf(marcador);
+  assert.notStrictEqual(inicio, -1, `seção ausente: ${marcador}`);
+  const resto = texto.slice(inicio + marcador.length);
+  const proxima = resto.search(new RegExp(`^#{1,${nivel}}\\s`, 'm'));
+  return proxima === -1 ? resto : resto.slice(0, proxima);
+}
+
 const MANIFESTOS = [
   '.claude-plugin/plugin.json',
   '.claude-plugin/marketplace.json',
@@ -141,13 +150,50 @@ test('o plugin do OpenCode importa e registra os dois comandos', async () => {
   const plugin = await import(url);
 
   const instancia = await plugin.default({});
-  const config = {};
+  const config = { instructions: ['instrucoes-existentes.md'] };
   await instancia.config(config);
 
   assert.deepStrictEqual(Object.keys(config.command).sort(), ['stilo', 'stilo-off']);
   assert.strictEqual(config.skills.paths.length, 1);
+  assert.deepStrictEqual(config.instructions, ['instrucoes-existentes.md']);
 
   const saida = { system: [] };
+  assert.strictEqual(typeof instancia['experimental.chat.system.transform'], 'function');
   await instancia['experimental.chat.system.transform']({}, saida);
   assert.match(saida.system[0], /Stilo Code — pipeline de projeto/);
+});
+
+test('a documentação não promove Copilot à camada de hooks sem manifesto', () => {
+  const spec = fs.readFileSync(path.join(RAIZ, 'spec.md'), 'utf8');
+  const suporteSpec = secaoMarkdown(spec, '10. Suporte por agente', 2);
+  const camadaManual = suporteSpec.match(/\*\*Camada 1[\s\S]*?(?=\n\*\*Camada 2)/);
+  const camadaHooks = suporteSpec.match(/\*\*Camada 2[\s\S]*?:\*\*([\s\S]*?)(?:\n\*\*|$)/);
+  assert.ok(camadaManual, 'spec.md precisa delimitar a camada manual');
+  assert.match(camadaManual[0], /GitHub Copilot CLI/i);
+  assert.match(camadaManual[0], /manual/i);
+  assert.ok(camadaHooks, 'spec.md precisa delimitar a camada de hooks');
+  assert.doesNotMatch(camadaHooks[1], /Copilot/i);
+
+  const agentes = fs.readFileSync(path.join(RAIZ, 'AGENTS.md'), 'utf8');
+  const suporteAgentes = secaoMarkdown(agentes, '10. Suporte por agente', 2);
+  assert.match(suporteAgentes, /GitHub Copilot CLI:[\s\S]*suporte manual/i);
+  assert.doesNotMatch(
+    suporteAgentes.match(/\*\*Claude Code[\s\S]*?(?=\n- \*\*)/)[0],
+    /Copilot/i
+  );
+
+  for (const [rel, titulo, manual] of [
+    ['README.md', 'GitHub Copilot CLI', /Suporte manual/],
+    ['README.en.md', 'GitHub Copilot CLI', /Manual support/],
+  ]) {
+    const texto = fs.readFileSync(path.join(RAIZ, rel), 'utf8');
+    const secao = secaoMarkdown(texto, titulo, 3);
+    assert.match(secao, manual, `${rel}: Copilot precisa constar como suporte manual`);
+    assert.match(secao, /não publica|does not publish/i, `${rel}: manifesto ausente não declarado`);
+    assert.doesNotMatch(secao, /suporte automático|automatic support/i);
+  }
+
+  const contrato = fs.readFileSync(path.join(RAIZ, 'docs/contrato-hooks.md'), 'utf8');
+  const compatibilidade = secaoMarkdown(contrato, 'Estado da compatibilidade', 2);
+  assert.match(compatibilidade, /GitHub Copilot CLI não verificado[\s\S]*suporte publicado é manual/i);
 });

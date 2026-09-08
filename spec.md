@@ -255,6 +255,10 @@ parou.
 Runtime: Node.js (mesmo requisito do ecossistema de plugins). Se `node` não estiver no
 PATH, os hooks falham silenciosamente e as skills continuam funcionando manualmente.
 
+O manifesto compartilhado usa `CLAUDE_PLUGIN_ROOT`; no Codex, o carregador fornece esse
+nome como alias compatível para a raiz do plugin. A saída específica do Codex continua
+identificada por `PLUGIN_DATA`.
+
 ## 9. Aviso de `/clear`
 
 O agente avisa proativamente quando é seguro limpar o contexto.
@@ -270,11 +274,17 @@ Mensagem: uma linha curta, ex. `✅ Ponto seguro para /clear`.
 ## 10. Suporte por agente
 
 **Camada 1 — só um arquivo** (`AGENTS.md` na raiz ou arquivo de regra próprio; sem hooks,
-sem estado automático):
-Codex, OpenCode, Cursor, Windsurf, Cline, Qoder, Kiro, Gemini CLI / Antigravity, Pi.
+sem estado automático; suporte manual):
+GitHub Copilot CLI, Cursor, Windsurf, Cline, Kiro, Gemini CLI / Antigravity e Pi.
 
 **Camada 2 — plugin com hooks** (estado injetado automaticamente, incluindo pós-`/clear`):
-Claude Code, Codex, GitHub Copilot CLI, Qoder.
+Claude Code, Codex e Qoder.
+
+**OpenCode — plugin experimental com fallback:** mantém
+`experimental.chat.system.transform` e registra comandos e skills. Se a versão instalada
+não expuser o hook experimental, o fallback suportado é copiar `AGENTS.md` para a raiz do
+projeto; `config.instructions` não é considerado fallback no OpenCode V2. A compatibilidade
+viva depende do smoke test da CLI.
 
 ## 11. Estrutura do repositório
 
@@ -338,6 +348,9 @@ são gerados por `scripts/sync-adapters.js`, e um teste falha se estiverem dessi
     `state.json` entre sessões.
 14. Todo texto publicado no repo está em pt-BR, e o agente responde em inglês quando o
     usuário escreve em inglês (§ 3).
+15. Copilot CLI aparece somente como suporte manual; OpenCode mantém o hook experimental,
+    documenta `AGENTS.md` na raiz do projeto como fallback manual e tem smoke test
+    condicionado à presença da CLI.
 
 ## 13. Riscos
 

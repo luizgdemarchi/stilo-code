@@ -1,7 +1,23 @@
 # Contrato de I/O dos hooks
 
-Fonte: ponytail 4.8.4 em `~/.claude/plugins/cache/ponytail/ponytail/4.8.4/`, que já roda
-em produção nos três agentes. Cada afirmação abaixo aponta para arquivo e linha.
+Este documento separa o contrato observado do código de compatibilidade ainda não
+validado em instalação viva. A referência original é ponytail 4.8.4 em
+`~/.claude/plugins/cache/ponytail/ponytail/4.8.4/`; as afirmações herdadas abaixo apontam
+para arquivo e linha.
+
+## Estado da compatibilidade
+
+- **Observado no pacote:** Claude Code, Codex e Qoder têm manifestos publicados. O Codex
+  define `PLUGIN_DATA` para o formato de saída e também fornece `CLAUDE_PLUGIN_ROOT` como
+  alias da raiz do plugin, permitindo reutilizar `hooks/claude-codex-hooks.json`.
+- **OpenCode experimental:** `.opencode/plugins/stilo.mjs` preserva
+  `experimental.chat.system.transform`. No OpenCode V2, `config.instructions` é retido na
+  configuração, mas seus arquivos não chegam ao modelo; o fallback suportado é copiar
+  `AGENTS.md` para a raiz do projeto. A compatibilidade viva só fica confirmada quando o
+  smoke test encontra e executa a CLI.
+- **GitHub Copilot CLI não verificado:** `stilo-runtime.js` mantém o envelope de
+  compatibilidade com `COPILOT_PLUGIN_DATA`, mas o pacote não publica manifesto Copilot.
+  O suporte publicado é manual por `AGENTS.md`; essa branch isolada não prova hooks.
 
 ## 1. Como o agente passa dados ao hook
 
@@ -41,7 +57,7 @@ Tudo em **stdout**. O formato depende do agente e do evento — `writeHookOutput
 |---|---|---|---|---|
 | Claude Code | nenhuma env das outras | **texto cru** | texto cru | `{"hookSpecificOutput":{"hookEventName":…,"additionalContext":…}}` |
 | Codex | `process.env.PLUGIN_DATA` | `{"systemMessage":…,"hookSpecificOutput":{…}}` | idem | idem |
-| Copilot CLI | `process.env.COPILOT_PLUGIN_DATA` | `{"additionalContext":…}` | `{}` (ignora) | `{}` (ignora) |
+| Copilot CLI *(compatibilidade não verificada)* | `process.env.COPILOT_PLUGIN_DATA` | `{"additionalContext":…}` | `{}` (ignora) | `{}` (ignora) |
 | Qoder | `process.env.QODER_SESSION_ID` | *(não tem o evento)* | `{"hookSpecificOutput":{…}}` | via `PreToolUse` matcher `task\|Task` |
 
 Detalhes que só aparecem lendo o código:
@@ -71,9 +87,9 @@ Detalhes que só aparecem lendo o código:
   sessão).
 - `"timeout": 5`, `"statusMessage"` opcional.
 - Raiz do plugin: `${CLAUDE_PLUGIN_ROOT}` em POSIX, `$env:CLAUDE_PLUGIN_ROOT` no
-  PowerShell. Codex usa `${PLUGIN_ROOT}` (`copilot-hooks.json`), e o Qoder não expande
-  nada — seu manifesto é um template com o caminho literal a substituir
-  (`qoder-hooks.json:2`).
+  PowerShell. No Codex, `CLAUDE_PLUGIN_ROOT` é um alias compatível da raiz do plugin; o
+  formato de saída continua selecionado por `PLUGIN_DATA`. O Qoder não expande nada — seu
+  manifesto é um template com o caminho literal a substituir (`qoder-hooks.json:2`).
 
 Dentro do JS, o ponytail nunca lê `CLAUDE_PLUGIN_ROOT`: resolve tudo por `__dirname`
 (`ponytail-instructions.js:9`). Mais robusto, porque funciona também em checkout solto

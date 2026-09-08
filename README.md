@@ -66,7 +66,14 @@ depois de um `/clear`.
 ### Codex
 
 Mesmo pacote, mesmo manifesto de hooks. Aponte o Codex para o repositório clonado; o
-`.codex-plugin/plugin.json` traz as skills e os hooks.
+`.codex-plugin/plugin.json` traz as skills e os hooks. O carregador do Codex fornece
+`CLAUDE_PLUGIN_ROOT` como alias compatível com o manifesto compartilhado.
+
+### GitHub Copilot CLI
+
+Suporte manual: copie `AGENTS.md` para a raiz do projeto ou forneça seu conteúdo como
+instrução. Este pacote não publica manifesto de hooks para o Copilot, portanto não promete
+injeção automática de estado ou retomada pós-`/clear` nesse agente.
 
 ### OpenCode
 
@@ -80,8 +87,11 @@ No seu `opencode.json`:
 { "plugin": ["/caminho/para/stilo-code/.opencode/plugins/stilo.mjs"] }
 ```
 
-O plugin injeta o pipeline no system prompt de cada turno e registra `/stilo` e
-`/stilo-off`.
+O plugin registra `/stilo` e `/stilo-off`, mantém a injeção pelo hook experimental
+`experimental.chat.system.transform`. Se a versão do OpenCode não aceitar o hook, copie
+`AGENTS.md` para a raiz do projeto, onde o OpenCode o carrega como regra. Não use
+`config.instructions` como fallback no OpenCode V2; a integração viva só é confirmada
+quando o smoke test da CLI é executado.
 
 ### Gemini CLI / Antigravity
 
