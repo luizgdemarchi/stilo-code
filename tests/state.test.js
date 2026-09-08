@@ -9,7 +9,9 @@ const {
   isOff,
   readState,
   resolveEnxuto,
+  resolveProjeto,
   setOff,
+  validateState,
   writeState,
 } = require('../hooks/stilo-state.js');
 
@@ -23,8 +25,20 @@ function criaProjeto(raiz, nome, state) {
   const dir = path.join(raiz, nome, '.stilo');
   fs.mkdirSync(dir, { recursive: true });
   const p = path.join(dir, 'state.json');
-  fs.writeFileSync(p, JSON.stringify(state || { version: 1, phase: 'PLAN' }));
+  fs.writeFileSync(
+    p,
+    JSON.stringify(
+      state || { version: 1, project: nome, phase: 'PLAN', reviewRound: 0, enxuto: 'auto' }
+    )
+  );
   return p;
+}
+
+function estadoValido(overrides) {
+  return Object.assign(
+    { version: 1, project: 'app', phase: 'PLAN', reviewRound: 0, enxuto: 'auto' },
+    overrides
+  );
 }
 
 test('findStateFiles acha subindo a partir de uma subpasta', () => {
@@ -93,6 +107,76 @@ test('writeState cria o diretório, carimba updated e volta legível', () => {
   assert.strictEqual(escrito.version, 1);
   assert.match(escrito.updated, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
   assert.deepStrictEqual(readState(p), escrito);
+});
+
+test('validateState aceita somente o schema completo da versão 1', () => {
+  assert.deepStrictEqual(validateState(estadoValido()), { valid: true, errors: [] });
+
+  const casos = [
+    [estadoValido({ version: 2 }), /version/],
+    [estadoValido({ project: '  ' }), /project/],
+    [estadoValido({ phase: undefined }), /phase/],
+    [estadoValido({ phase: null }), /phase/],
+    [estadoValido({ phase: '' }), /phase/],
+    [estadoValido({ phase: 'BUILD' }), /phase/],
+    [estadoValido({ reviewRound: -1 }), /reviewRound/],
+    [estadoValido({ reviewRound: 1.5 }), /reviewRound/],
+    [estadoValido({ enxuto: 'compacto' }), /enxuto/],
+  ];
+
+  for (const [state, padrao] of casos) {
+    const resultado = validateState(state);
+    assert.strictEqual(resultado.valid, false, JSON.stringify(state));
+    assert.match(resultado.errors.join(' '), padrao);
+  }
+});
+
+test('resolveProjeto distingue ausente, ilegível, inválido, válido e ambíguo', () => {
+  const ausente = tmpdir();
+  assert.strictEqual(resolveProjeto(ausente).status, 'absent');
+
+  const ilegivel = tmpdir();
+  const caminhoIlegivel = criaProjeto(ilegivel, 'app', estadoValido());
+  fs.writeFileSync(caminhoIlegivel, '{ "version": 1');
+  const resolucaoIlegivel = resolveProjeto(ilegivel);
+  assert.strictEqual(resolucaoIlegivel.status, 'unreadable');
+  assert.strictEqual(resolucaoIlegivel.statePath, caminhoIlegivel);
+  assert.match(resolucaoIlegivel.error, /JSON|fim|token|parse/i);
+
+  const invalido = tmpdir();
+  const caminhoInvalido = criaProjeto(invalido, 'app', estadoValido({ phase: null }));
+  const resolucaoInvalida = resolveProjeto(invalido);
+  assert.strictEqual(resolucaoInvalida.status, 'invalid');
+  assert.strictEqual(resolucaoInvalida.statePath, caminhoInvalido);
+  assert.match(resolucaoInvalida.errors.join(' '), /phase/);
+
+  const valido = tmpdir();
+  const caminhoValido = criaProjeto(valido, 'app', estadoValido({ phase: 'EXECUTE' }));
+  const resolucaoValida = resolveProjeto(valido);
+  assert.strictEqual(resolucaoValida.status, 'valid');
+  assert.strictEqual(resolucaoValida.statePath, caminhoValido);
+  assert.strictEqual(resolucaoValida.state.phase, 'EXECUTE');
+
+  const ambiguo = tmpdir();
+  criaProjeto(ambiguo, 'a', estadoValido({ project: 'a' }));
+  criaProjeto(ambiguo, 'b', estadoValido({ project: 'b' }));
+  assert.strictEqual(resolveProjeto(ambiguo).status, 'ambiguous');
+});
+
+test('resolveProjeto classifica JSON válido não objeto como estado inválido', () => {
+  for (const valor of [null, [], 'texto']) {
+    const raiz = tmpdir();
+    const caminho = criaProjeto(raiz, 'app', estadoValido());
+    fs.writeFileSync(caminho, JSON.stringify(valor));
+
+    const resolucao = resolveProjeto(raiz);
+
+    assert.strictEqual(resolucao.status, 'invalid', JSON.stringify(valor));
+    assert.strictEqual(resolucao.statePath, caminho);
+    assert.deepStrictEqual(resolucao.state, valor);
+    assert.match(resolucao.errors.join(' '), /objeto JSON/);
+    assert.strictEqual(resolucao.error, null);
+  }
 });
 
 test('resolveEnxuto usa a tabela por fase quando o valor é auto', () => {

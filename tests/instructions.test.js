@@ -1,6 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+
+const { resolveProjeto } = require('../hooks/stilo-state.js');
 
 const {
   buildAmbiguityNote,
@@ -11,6 +15,21 @@ const {
 } = require('../hooks/stilo-instructions.js');
 
 const RAIZ = path.join(__dirname, '..');
+
+function estado(overrides) {
+  return Object.assign(
+    { version: 1, project: 'x', phase: 'PLAN', reviewRound: 0, enxuto: 'auto' },
+    overrides
+  );
+}
+
+function projetoComConteudo(conteudo) {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-instructions-'));
+  const dir = path.join(raiz, 'app', '.stilo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'state.json'), conteudo);
+  return { resolucao: resolveProjeto(raiz) };
+}
 
 test('buildStateLine cabe em uma linha e cita fase e próxima ação', () => {
   const linha = buildStateLine({ project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
@@ -27,6 +46,37 @@ test('buildStateLine sem estado manda começar em BRAINSTORM', () => {
 
   assert.strictEqual(linha.includes('\n'), false);
   assert.match(linha, /BRAINSTORM/);
+});
+
+test('instruções bloqueiam reinício quando o state é ilegível', () => {
+  const { resolucao } = projetoComConteudo('{ "version": 1');
+
+  const linha = buildStateLine(resolucao.state, resolucao.caminhos);
+  assert.match(linha, /ilegível/i);
+  assert.match(linha, /não (crie|reinicie|recomece)/i);
+  assert.doesNotMatch(linha, /criar a subpasta/);
+
+  const contexto = buildFullContext(resolucao.state, resolucao.caminhos);
+  assert.match(contexto, /state\.json/);
+  assert.match(contexto, /não (crie|reinicie|recomece)/i);
+  assert.doesNotMatch(contexto, /Nenhum `\.stilo\/state\.json` encontrado/);
+});
+
+test('instruções listam campos e bloqueiam ação quando o state é inválido', () => {
+  const { resolucao } = projetoComConteudo(
+    JSON.stringify(estado({ phase: null, enxuto: 'compacto' }))
+  );
+
+  const linha = buildStateLine(resolucao.state, resolucao.caminhos);
+  assert.match(linha, /inválido/i);
+  assert.match(linha, /phase/);
+  assert.match(linha, /enxuto/);
+  assert.match(linha, /não (avance|aja)/i);
+
+  const contexto = buildFullContext(resolucao.state, resolucao.caminhos);
+  assert.match(contexto, /phase/);
+  assert.match(contexto, /enxuto/);
+  assert.match(contexto, /não (avance|aja)/i);
 });
 
 test('modulosDaFase: EXECUTE leva enxuto, não leva revisor', () => {

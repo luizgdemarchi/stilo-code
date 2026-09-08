@@ -69,6 +69,27 @@ function faseInvalida(state) {
   return normalizeFase(state.phase) ? null : sanitiza(state.phase);
 }
 
+function diagnosticoEstado(state, caminhos) {
+  const status = caminhos && caminhos.status;
+  if (status === 'unreadable') {
+    return {
+      status,
+      statePath: caminhos.statePath,
+      error: caminhos.error,
+      errors: [],
+    };
+  }
+  if (status === 'invalid') {
+    return {
+      status,
+      statePath: caminhos.statePath,
+      error: null,
+      errors: Array.isArray(caminhos.errors) ? caminhos.errors : [],
+    };
+  }
+  return null;
+}
+
 // Módulos que o hook injeta sozinho. frontend.md e autoria-skill.md ficam de
 // fora de propósito: o gatilho deles depende do que o diff toca e do que o
 // projeto é, coisas que só o agente sabe. O AGENTS.md § 5 diz quando lê-los.
@@ -84,6 +105,17 @@ function modulosDaFase(state) {
 function buildStateLine(state, caminhos) {
   if (caminhos && caminhos.length > 1) {
     return `stilo: ${caminhos.length} projetos encontrados a partir do diretório atual — pergunte ao usuário qual é o desta conversa antes de agir`;
+  }
+  const diagnostico = diagnosticoEstado(state, caminhos);
+  if (diagnostico && diagnostico.status === 'unreadable') {
+    return `stilo: state.json ilegível em ${sanitiza(diagnostico.statePath, 160)} · erro: ${sanitiza(diagnostico.error, 120)} · não crie nem reinicie o projeto; corrija o arquivo antes de agir`;
+  }
+  if (diagnostico && diagnostico.status === 'invalid') {
+    const invalida = faseInvalida(state);
+    if (invalida) {
+      return `stilo: fase inválida no state.json: "${invalida}" · campos: ${sanitiza(diagnostico.errors.join('; '), 130)} · não avance nem aja até corrigir o arquivo`;
+    }
+    return `stilo: state.json inválido em ${sanitiza(diagnostico.statePath, 140)} · campos: ${sanitiza(diagnostico.errors.join('; '), 150)} · não avance nem aja até corrigir o arquivo`;
   }
   if (!state) {
     return 'stilo: nenhum projeto ativo · próxima: criar a subpasta do projeto e começar em BRAINSTORM';
@@ -103,6 +135,42 @@ function blocoEstado(state, caminhos) {
   // workspace que já tem dois.
   if (caminhos && caminhos.length > 1) {
     return ['## Estado do Stilo Code', '', buildAmbiguityNote(caminhos)].join('\n');
+  }
+
+  const diagnostico = diagnosticoEstado(state, caminhos);
+  if (diagnostico) {
+    const linhas = [
+      '## Estado do Stilo Code',
+      '',
+      `- **Arquivo:** ${sanitiza(diagnostico.statePath, 200)}`,
+    ];
+    if (diagnostico.status === 'unreadable') {
+      linhas.push(
+        '- **Estado:** ilegível',
+        `- **Erro:** ${sanitiza(diagnostico.error, 240)}`,
+        '',
+        'Não crie nem reinicie o projeto. Corrija o `state.json` antes de agir.'
+      );
+    } else {
+      const invalida = faseInvalida(state);
+      if (invalida) {
+        linhas.push(
+          `- **Fase:** valor inválido no \`state.json\`: \`"${invalida}"\``,
+          `- **Campos:** ${sanitiza(diagnostico.errors.join('; '), 300)}`,
+          '',
+          'Não avance nem aja no projeto até corrigir todos os campos do `state.json`.',
+          'Não adivinhe a fase, e não recomece o projeto.'
+        );
+      } else {
+        linhas.push(
+          '- **Estado:** inválido',
+          `- **Campos:** ${sanitiza(diagnostico.errors.join('; '), 300)}`,
+          '',
+          'Não avance nem aja no projeto até corrigir todos os campos do `state.json`.'
+        );
+      }
+    }
+    return linhas.join('\n');
   }
 
   if (!state) {
@@ -161,7 +229,8 @@ function blocoEstado(state, caminhos) {
 // módulos que a fase pede.
 function buildFullContext(state, caminhos) {
   const partes = [lerArquivo('AGENTS.md'), blocoEstado(state, caminhos)];
-  for (const modulo of modulosDaFase(state)) {
+  const podeAgir = !diagnosticoEstado(state, caminhos) && !(caminhos && caminhos.length > 1);
+  for (const modulo of podeAgir ? modulosDaFase(state) : []) {
     const texto = lerArquivo('modules', modulo);
     if (texto) partes.push(texto);
   }

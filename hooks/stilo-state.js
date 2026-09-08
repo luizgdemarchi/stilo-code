@@ -2,8 +2,8 @@
 // Stilo Code — leitura e escrita do estado do projeto.
 //
 // Biblioteca pura: só sistema de arquivos, nenhum I/O de hook. Nada aqui lança
-// exceção para fora — estado ilegível vira "não encontrei", nunca uma sessão
-// quebrada.
+// exceção para fora; arquivos ilegíveis e estados inválidos preservam o caminho
+// e retornam diagnóstico explícito.
 
 const fs = require('fs');
 const os = require('os');
@@ -14,6 +14,7 @@ const STATE_FILE = 'state.json';
 
 const FASES = ['BRAINSTORM', 'SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'];
 const NIVEIS = ['off', 'leve', 'pleno'];
+const ENXUTO_VALIDOS = ['auto', ...NIVEIS];
 
 // Nível de enxuto por fase quando state.enxuto é "auto" (AGENTS.md § 6).
 const ENXUTO_POR_FASE = {
@@ -125,6 +126,46 @@ function readState(statePath) {
   }
 }
 
+function readStateResult(statePath) {
+  let raw;
+  try {
+    raw = fs.readFileSync(statePath, 'utf8').replace(/^\uFEFF/, '');
+  } catch (e) {
+    return {
+      parsed: false,
+      state: null,
+      error: e && e.message ? String(e.message) : 'não foi possível ler o arquivo',
+    };
+  }
+  try {
+    const state = JSON.parse(raw);
+    return { parsed: true, state, error: null };
+  } catch (e) {
+    return { parsed: false, state: null, error: 'JSON inválido ou truncado' };
+  }
+}
+
+function validateState(state) {
+  const errors = [];
+  if (!state || typeof state !== 'object' || Array.isArray(state)) {
+    return { valid: false, errors: ['state deve ser um objeto JSON'] };
+  }
+  if (state.version !== 1) errors.push('version deve ser 1');
+  if (typeof state.project !== 'string' || !state.project.trim()) {
+    errors.push('project deve ser uma string não vazia');
+  }
+  if (typeof state.phase !== 'string' || !FASES.includes(state.phase)) {
+    errors.push(`phase deve ser uma de: ${FASES.join(', ')}`);
+  }
+  if (!Number.isInteger(state.reviewRound) || state.reviewRound < 0) {
+    errors.push('reviewRound deve ser um inteiro não negativo');
+  }
+  if (typeof state.enxuto !== 'string' || !ENXUTO_VALIDOS.includes(state.enxuto)) {
+    errors.push(`enxuto deve ser um de: ${ENXUTO_VALIDOS.join(', ')}`);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 // Carimba `updated` na hora de gravar: o agente esquecer o timestamp faz a
 // próxima sessão confiar num estado que não sabe de quando é.
 function writeState(statePath, state) {
@@ -168,8 +209,33 @@ function resolveEnxuto(state) {
 // um item é ambiguidade: quem chama reporta, nunca escolhe.
 function resolveProjeto(cwd) {
   const caminhos = findStateFiles(cwd);
-  if (caminhos.length !== 1) return { state: null, statePath: null, caminhos };
-  return { state: readState(caminhos[0]), statePath: caminhos[0], caminhos };
+  if (caminhos.length === 0) return resolution('absent', null, null, caminhos);
+  if (caminhos.length > 1) return resolution('ambiguous', null, null, caminhos);
+
+  const statePath = caminhos[0];
+  const leitura = readStateResult(statePath);
+  if (!leitura.parsed) {
+    return resolution('unreadable', null, statePath, caminhos, [], leitura.error);
+  }
+
+  const validacao = validateState(leitura.state);
+  if (!validacao.valid) {
+    return resolution('invalid', leitura.state, statePath, caminhos, validacao.errors);
+  }
+  return resolution('valid', leitura.state, statePath, caminhos);
+}
+
+function resolution(status, state, statePath, caminhos, errors = [], error = null) {
+  // Os hooks antigos passam apenas `state` e `caminhos` para a camada de
+  // instruções. Metadados não enumeráveis preservam a API da lista e carregam
+  // o diagnóstico sem obrigar todos os adaptadores a mudar juntos.
+  Object.defineProperties(caminhos, {
+    status: { value: status, enumerable: false },
+    statePath: { value: statePath, enumerable: false },
+    errors: { value: errors, enumerable: false },
+    error: { value: error, enumerable: false },
+  });
+  return { status, state, statePath, caminhos, errors, error };
 }
 
 module.exports = {
@@ -185,5 +251,6 @@ module.exports = {
   resolveProjeto,
   setOff,
   stiloHome,
+  validateState,
   writeState,
 };
