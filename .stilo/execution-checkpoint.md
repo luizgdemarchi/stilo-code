@@ -8,7 +8,7 @@ Atualizado: 2026-09-16T17:24:17Z
 - Fase: `REVIEW`
 - Rodada: `6`
 - Modo enxuto efetivo: `pleno` (state: `auto`)
-- Último commit local: `9913069 fix: registrar rodada final de revisão e proteger hooks`
+- Commits locais: `9913069 fix: registrar rodada final de revisão e proteger hooks`; `e37d66f docs: salvar caderno de bordo da retomada`
 - Working tree: limpa
 
 ## Concluído
