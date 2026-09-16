@@ -1,0 +1,8 @@
+require('./diagnostics.test.js');
+require('./hooks.test.js');
+require('./instructions.test.js');
+require('./manifestos.test.js');
+require('./opencode-runtime.test.js');
+require('./orchestration.test.js');
+require('./state.test.js');
+require('./validate-plan.test.js');

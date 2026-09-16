@@ -16,7 +16,10 @@ function localizarOpenCode() {
   const comando = process.platform === 'win32' ? 'where.exe' : 'which';
   const resultado = spawnSync(comando, ['opencode'], { encoding: 'utf8' });
   if (resultado.status !== 0) return null;
-  return resultado.stdout.split(/\r?\n/).find(Boolean) || null;
+  const caminhos = resultado.stdout.split(/\r?\n/).filter(Boolean);
+  return process.platform === 'win32'
+    ? caminhos.find((caminho) => /\.(cmd|exe)$/i.test(caminho)) || caminhos[0] || null
+    : caminhos[0] || null;
 }
 
 const opencode = localizarOpenCode();

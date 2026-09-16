@@ -10,7 +10,7 @@
     "url": "https://github.com/luizgdemarchi/stilo-code.git"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test tests/all.test.js",
     "sync": "node scripts/sync-adapters.js",
     "validate-plan": "node scripts/validate-plan.js docs/superpowers/plans/2026-09-07-retomada-confiavel-governanca-plan.md"
   }

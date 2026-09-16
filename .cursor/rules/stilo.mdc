@@ -207,7 +207,17 @@ Só entra nessa lista o que instala em quase todo agente: servidor MCP, ou pacot
 adaptadores multi-agente. Ferramenta presa a um único agente cria um pipeline que quebra
 ao trocar de ferramenta — exatamente o problema que o Stilo Code existe para resolver.
 
-## 10. Comandos
+## 10. Suporte por agente
+
+- **Claude Code, Codex e Qoder:** integração por hooks, conforme os manifestos publicados.
+- **OpenCode:** o plugin preserva o hook experimental de system prompt. Como fallback
+  suportado, copie este `AGENTS.md` para a raiz do projeto; não dependa de
+  `config.instructions`, que no OpenCode V2 ainda não injeta arquivos no modelo.
+- **GitHub Copilot CLI:** suporte manual. Copie este `AGENTS.md` para o projeto ou forneça
+  seu conteúdo como instrução; o pacote não publica manifesto de hooks para o Copilot.
+- **Demais agentes:** use este `AGENTS.md` ou o adaptador próprio incluído no repositório.
+
+## 11. Comandos
 
 | Comando | Efeito |
 |---|---|
