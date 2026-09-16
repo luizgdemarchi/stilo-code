@@ -186,8 +186,8 @@ test('docs/aceite registra os 15 critérios e mantém o smoke OpenCode pendente'
   assert.deepStrictEqual(evidence.errors, []);
   const openCode = evidence.criteria.find((criterion) => criterion.criterion === '15');
   assert.strictEqual(openCode.type, 'pendente');
-  assert.strictEqual(openCode.command, '`OpenCode CLI ausente; smoke test pendente`');
-  assert.strictEqual(openCode.result, '`OpenCode CLI ausente; smoke test pendente`');
+  assert.strictEqual(openCode.command, 'smoke test do OpenCode');
+  assert.strictEqual(openCode.result, 'N\u00e3o executado por dispensa do usu\u00e1rio; sem alega\u00e7\u00e3o de compatibilidade viva');
 });
 
 test('readCycle tolera campos legados, rejeita id inseguro e diagnóstico lista documentos do ciclo', () => {

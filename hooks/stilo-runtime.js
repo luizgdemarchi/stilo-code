@@ -10,6 +10,16 @@ const isCopilot = Boolean(process.env.COPILOT_PLUGIN_DATA);
 const isCodex = !isCopilot && Boolean(process.env.PLUGIN_DATA);
 const isQoder = !isCopilot && !isCodex && Boolean(process.env.QODER_SESSION_ID);
 
+const stdoutGuards = new WeakSet();
+
+function installStdoutGuard(stream = process.stdout) {
+  if (stdoutGuards.has(stream)) return;
+  stdoutGuards.add(stream);
+  stream.on('error', () => {
+    // O agente pode fechar o pipe ao interromper ou limitar uma saída grande.
+  });
+}
+
 function envelope(event, context) {
   return JSON.stringify({
     hookSpecificOutput: { hookEventName: event, additionalContext: context },
@@ -18,6 +28,7 @@ function envelope(event, context) {
 
 function writeHookOutput(event, context) {
   try {
+    installStdoutGuard();
     const texto = String(context || '');
 
     if (isCopilot) {
@@ -77,4 +88,4 @@ function readStdinJson(callback, timeoutMs) {
   }, timeoutMs || 1000).unref();
 }
 
-module.exports = { isCodex, isCopilot, isQoder, readStdinJson, writeHookOutput };
+module.exports = { installStdoutGuard, isCodex, isCopilot, isQoder, readStdinJson, writeHookOutput };

@@ -18,13 +18,13 @@ Os 15 critérios de `spec.md` permanecem rastreados. `local` registra uma verifi
 | 12 | T8 | conversa viva em `EXECUTE` | pendente | Resolução `pleno` verificada; forma da resposta ainda não observada | review-04 |
 | 13 | T3 | `node --test tests/hooks.test.js` | local | Override `enxuto: pleno` persiste sem mudar a fase | review-04 |
 | 14 | T8 | mensagem em inglês numa conversa viva | pendente | Regra publicada; resposta do agente ainda não observada | review-04 |
-| 15 | T6 | `OpenCode CLI ausente; smoke test pendente` | pendente | `OpenCode CLI ausente; smoke test pendente` | review-04 |
+| 15 | T6 | smoke test do OpenCode | pendente | Não executado por dispensa do usuário; sem alegação de compatibilidade viva | review-06 |
 
 ## Limitações e validações vivas
 
-Os critérios 2, 4, 5, 12, 14 e 15 continuam pendentes. Os cinco primeiros exigem uma conversa real porque testes de hook provam o contexto injetado, mas não provam que o agente seguirá a instrução. O critério 15 exige o smoke test do OpenCode.
+Os critérios 2, 4, 5, 12 e 14 continuam pendentes. Eles exigem uma conversa real porque testes de hook provam o contexto injetado, mas não provam que o agente seguirá a instrução. O critério 15 foi dispensado pelo usuário nesta versão e permanece sem evidência viva.
 
-O smoke test de OpenCode também permanece pendente. Em 2026-09-08, `node --test tests/opencode-runtime.test.js` registrou literalmente `OpenCode CLI ausente; smoke test pendente`; não há validação viva do hook experimental. O fallback suportado é fornecer o `AGENTS.md` na raiz do projeto.
+O smoke test de OpenCode não será executado nesta versão por decisão do usuário; não há validação viva do hook experimental. O fallback suportado é fornecer o `AGENTS.md` na raiz do projeto.
 
 GitHub Copilot CLI tem suporte manual por `AGENTS.md`; o pacote não publica manifesto de hooks para o Copilot.
 

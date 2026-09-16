@@ -4,9 +4,19 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { EventEmitter } = require('node:events');
+const { installStdoutGuard } = require('../hooks/stilo-runtime.js');
 
 const RAIZ = path.join(__dirname, '..');
 const HOOKS = path.join(RAIZ, 'hooks');
+
+test('stdout fechado não transforma EPIPE em falha do processo', () => {
+  const stdout = new EventEmitter();
+  installStdoutGuard(stdout);
+  assert.doesNotThrow(() => {
+    stdout.emit('error', Object.assign(new Error('pipe fechado'), { code: 'EPIPE' }));
+  });
+});
 
 function tmpdir() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-hook-')));
