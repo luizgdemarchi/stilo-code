@@ -189,6 +189,16 @@ node scripts/sync-adapters.js --check   # fails if any adapter drifted
 `AGENTS.md` is the single source of truth for the ruleset. The six per-agent rule files are
 generated, never hand-edited — a test fails if they drift.
 
+The checkout and the installed plugin copy are separate states. After changing the
+checkout, run `claude plugin validate .`; `claude plugin details stilo-code@stilo-code`
+shows the active copy. The installation receives changes only after an authorized install
+or update.
+
+The instruction test monitors a 22,000-character budget for the seven nominal phase
+contexts. Ambiguities with many projects add text proportionally and remain reported by
+the diagnostic. `UserPromptSubmit` still uses a short state line; `SessionStart` and
+`SubagentStart` load the ruleset needed to keep `AGENTS.md` self-contained.
+
 ## License
 
 MIT © Luiz Gabriel De Marchi Nascimento

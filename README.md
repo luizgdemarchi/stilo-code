@@ -185,6 +185,17 @@ node scripts/sync-adapters.js --check   # falha se algum adaptador divergir
 `AGENTS.md` é a fonte única do ruleset. Os seis arquivos de regra por agente são gerados,
 nunca editados à mão — um teste falha se saírem de sincronia.
 
+O checkout e a cópia instalada do plugin são estados distintos. Depois de alterar o
+checkout, rode `claude plugin validate .`; `claude plugin details stilo-code@stilo-code`
+mostra a cópia ativa. A instalação só recebe mudanças após uma nova instalação ou
+atualização autorizada.
+
+O teste de instruções monitora um orçamento de 22.000 caracteres para os contextos nominais
+das sete fases. Ambiguidades com muitos projetos acrescentam texto proporcionalmente e
+continuam sendo reportadas pelo diagnóstico. `UserPromptSubmit` usa uma linha curta;
+`SessionStart` e `SubagentStart` carregam o ruleset necessário para manter `AGENTS.md`
+autossuficiente.
+
 ## Licença
 
 MIT © Luiz Gabriel De Marchi Nascimento

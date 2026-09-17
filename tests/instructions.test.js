@@ -181,3 +181,18 @@ test('buildStateLine cabe em uma linha mesmo com valor hostil', () => {
     assert.ok(linha.length < 400, `linha longa demais: ${linha.length}`);
   }
 });
+
+test('contexto nominal por fase respeita o orçamento de 22 mil caracteres', () => {
+  const fases = ['BRAINSTORM', 'SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'];
+  for (const phase of fases) {
+    const contexto = buildFullContext({
+      version: 1,
+      project: 'x',
+      phase,
+      reviewRound: 1,
+      enxuto: 'auto',
+      updated: '2026-01-01T00:00:00Z',
+    });
+    assert.ok(contexto.length <= 22_000, 'fase: ' + phase + ': ' + contexto.length + ' caracteres');
+  }
+});
