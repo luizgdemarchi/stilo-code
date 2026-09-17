@@ -1,15 +1,15 @@
 # Caderno de bordo — Stilo Code
 
-Atualizado: 2026-09-16T17:24:17Z
+Atualizado: 2026-09-17T12:35:39Z
 
 ## Estado persistido
 
 - Projeto: `stilo-code`
 - Fase: `REVIEW`
-- Rodada: `6`
+- Rodada: `7`
 - Modo enxuto efetivo: `pleno` (state: `auto`)
-- Commits locais: `9913069 fix: registrar rodada final de revisão e proteger hooks`; `e37d66f docs: salvar caderno de bordo da retomada`
-- Working tree: limpa
+- Commits locais: `d57264c test: proteger orçamento nominal de contexto`; `9913069 fix: registrar rodada final de revisão e proteger hooks`; `e37d66f docs: salvar caderno de bordo da retomada`
+- Working tree: limpa após o commit deste checkpoint
 
 ## Concluído
 
@@ -17,8 +17,13 @@ Atualizado: 2026-09-16T17:24:17Z
 - Diagnóstico seguro, checkpoints/ciclos, validador de planos e matriz de evidências.
 - Guard de `stdout` para `EPIPE` e teste de regressão.
 - `review-05` preservado; `review-06` registrado com 0 achados.
+- Orçamento de 22.000 caracteres para contextos nominais por fase, com teste de regressão.
+- Documentação sobre a diferença entre checkout e plugin instalado em `README.md` e
+  `README.en.md`.
+- `review-07` registrado com 0 achados após re-review independente.
 - `claude plugin validate .`: passou.
-- `OPENCODE_BIN='' npm.cmd test`: 90 testes, 89 passados, 1 smoke pendente.
+- `OPENCODE_BIN='' node --test tests/all.test.js`: 91 testes, 90 passados, 1 smoke pendente.
+- `node --test tests/instructions.test.js`: 15/15 passados.
 - `node scripts/sync-adapters.js --check`: passou.
 - `npm.cmd run validate-plan`: 8 tarefas, 6 ondas, passou.
 - `git diff --check`: passou.
@@ -41,7 +46,6 @@ criação de projeto.
 
 ## Próxima ação
 
-Obter confirmação para um incremento de melhorias. Recomendação: manter o runtime
-enxuto atual, documentar a diferença entre checkout e plugin instalado e adicionar
-um teste de orçamento de contexto. Redução real do contexto exige revisão da
-especificação e novo ciclo.
+Manter a fase `REVIEW`: os critérios vivos 2, 4, 5, 12 e 14 ainda exigem evidência externa;
+o critério 15 permanece dispensado. Não reinstalar/publicar o plugin sem autorização.
+Uma redução real do contexto exigiria revisão da especificação e novo ciclo.
