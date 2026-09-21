@@ -71,15 +71,20 @@ test('SessionStart tem o matcher que faz o /clear funcionar', () => {
   assert.strictEqual(grupo.matcher, 'startup|resume|clear|compact');
 });
 
-test('as duas skills têm frontmatter com name e description', () => {
-  for (const nome of ['stilo', 'stilo-off']) {
-    const rel = path.join('skills', nome, 'SKILL.md');
-    assert.strictEqual(existe(rel), true, `${rel} não existe`);
-    const texto = fs.readFileSync(path.join(RAIZ, rel), 'utf8');
-    const fm = texto.match(/^---\n([\s\S]*?)\n---/);
-    assert.ok(fm, `${rel}: sem frontmatter`);
-    assert.match(fm[1], new RegExp(`^name: ${nome}$`, 'm'), `${rel}: name errado`);
-    assert.match(fm[1], /^description: \S/m, `${rel}: sem description`);
+test('nenhum comando ou skill público do Stilo é publicado', () => {
+  for (const rel of [
+    'commands/stilo.toml',
+    'commands/stilo-off.toml',
+    'skills/stilo/SKILL.md',
+    'skills/stilo-off/SKILL.md',
+    '.opencode/command/stilo.md',
+    '.opencode/command/stilo-off.md',
+  ]) {
+    assert.strictEqual(existe(rel), false, `${rel} ainda existe`);
+  }
+  for (const rel of ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
+    const manifesto = leJson(rel);
+    assert.strictEqual(Object.hasOwn(manifesto, 'skills'), false, `${rel} ainda publica skills`);
   }
 });
 
@@ -122,41 +127,13 @@ test('os adaptadores estão em dia com o AGENTS.md', () => {
 // Sem parser de TOML embutido no Node, um verificador mínimo do que nós mesmos
 // geramos: as chaves obrigatórias, e barra invertida só dentro de string
 // literal ('''), onde o TOML não interpreta escape nenhum.
-test('os comandos TOML têm description e prompt, sem escape inválido', () => {
-  for (const nome of ['stilo', 'stilo-off']) {
-    const rel = path.join('commands', `${nome}.toml`);
-    assert.strictEqual(existe(rel), true, `${rel} não existe`);
-    const texto = fs.readFileSync(path.join(RAIZ, rel), 'utf8');
-
-    const desc = texto.match(/^description = "([^"]*)"$/m);
-    assert.ok(desc, `${rel}: description precisa ser uma string básica`);
-    assert.strictEqual(
-      desc[1].includes(String.fromCharCode(92)),
-      false,
-      `${rel}: barra invertida na description, que é string básica`
-    );
-
-    const prompt = texto.match(/^prompt = '''([\s\S]*)'''$/m);
-    assert.ok(prompt, `${rel}: prompt precisa ser string literal '''...'''`);
-    assert.strictEqual(prompt[1].includes("'''"), false, `${rel}: ''' dentro do prompt`);
-    assert.match(prompt[1], /stilo/i);
-  }
-});
-
-test('o plugin do OpenCode importa e registra os dois comandos', async () => {
+test('o plugin do OpenCode importa e injeta apenas contexto automático', async () => {
   const url = require('node:url').pathToFileURL(
     path.join(RAIZ, '.opencode', 'plugins', 'stilo.mjs')
   ).href;
   const plugin = await import(url);
 
   const instancia = await plugin.default({});
-  const config = { instructions: ['instrucoes-existentes.md'] };
-  await instancia.config(config);
-
-  assert.deepStrictEqual(Object.keys(config.command).sort(), ['stilo', 'stilo-off']);
-  assert.strictEqual(config.skills.paths.length, 1);
-  assert.deepStrictEqual(config.instructions, ['instrucoes-existentes.md']);
-
   const saida = { system: [] };
   assert.strictEqual(typeof instancia['experimental.chat.system.transform'], 'function');
   await instancia['experimental.chat.system.transform']({}, saida);

@@ -3,6 +3,11 @@
 > Fase do pipeline: PLAN · Baseado em `spec.md`
 > Execução em **Sonnet 5 @ medium** (fase `EXECUTE`); voltar a Opus/xhigh no `REVIEW`.
 
+> **Emenda ativa (2026-09-18):** o escopo atual é o ciclo automático sem comandos,
+> detalhado em `docs/superpowers/plans/2026-09-18-automatico-sem-comandos-plan.md`.
+> Os passos abaixo preservam a implementação histórica; não reintroduza comandos, skills
+> ou overrides manuais. A execução da emenda segue o plano detalhado e serial.
+
 ## Contexto de execução
 
 | Item | Valor |

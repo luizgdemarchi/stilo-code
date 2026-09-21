@@ -1,5 +1,0 @@
----
-description: Inicia ou retoma um projeto no pipeline do Stilo Code
----
-
-Leia o AGENTS.md deste pacote se ele ainda não estiver no seu contexto. Procure `.stilo/state.json` subindo a partir do diretório atual e, se não achar, um nível abaixo. Achou um: reporte projeto, fase e a próxima ação da fase em uma linha, leia os artefatos que já existem (`spec.md`, `plan.md`, o último `.stilo/review-NN.md`) e execute a próxima ação. Achou mais de um: liste os caminhos e pergunte qual é o desta conversa, nunca escolha sozinho. Não achou nenhum: é projeto novo — crie a subpasta com o nome dado, crie `<subpasta>/.stilo/state.json` com `version` 1, `project`, `phase` BRAINSTORM, `reviewRound` 0, `enxuto` auto e `updated` em ISO 8601 UTC, e comece pelas perguntas de brainstorm. Nunca pule para a implementação: nada de código, estrutura de pastas ou esqueleto antes de `spec.md` e `plan.md` aprovados. Se o argumento for `enxuto <nível>` com nível `off`, `leve`, `pleno` ou `auto`, grave esse valor no campo `enxuto` do `state.json` e confirme em uma linha. Responda no idioma em que o usuário escreveu.

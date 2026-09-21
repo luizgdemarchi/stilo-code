@@ -1,38 +1,40 @@
 # Critérios de aceite — matriz de evidências
 
-Os 15 critérios de `spec.md` permanecem rastreados. `local` registra uma verificação reproduzível no checkout, `viva` registra execução observada no agente e `pendente` impede que o diagnóstico trate `DONE` como comprovado.
+Critérios locais têm verificação reproduzível no checkout. Critérios vivos exigem
+observação em um agente instalado; sem essa evidência permanecem pendentes e o projeto
+não é declarado `DONE`.
 
 | Critério | Tarefa | Comando | Tipo | Resultado | Review |
 |---|---|---|---|---|---|
-| 1 | T8 | `claude plugin details stilo-code@stilo-code` | viva | Instalação local e via GitHub reconheceu 2 skills e 3 hooks | review-04 |
-| 2 | T8 | conversa em pasta sem `.stilo` | pendente | Mecanismo local verificado; comportamento vivo ainda não executado | review-04 |
-| 3 | T8 | nova sessão com `phase: PLAN` | viva | Sessão instalada reportou `PLAN` e a próxima ação | review-04 |
-| 4 | T8 | `/clear` durante `PLAN` | pendente | Matcher e releitura do disco verificados; conversa viva ainda não executada | review-04 |
-| 5 | T8 | concluir `SPEC` em conversa viva | pendente | Instrução publicada; gravação, avanço e aviso ainda não observados juntos | review-04 |
-| 6 | T3 | `node --test tests/hooks.test.js` | local | Desligamento e religação, inclusive falhas simuladas, passam | review-04 |
-| 7 | T7 | `node --test tests/manifestos.test.js` | local | Guard sem `node` no PATH permanece coberto | review-04 |
-| 8 | T7 | `node scripts/sync-adapters.js --check` | local | Adaptadores sincronizados no checkout | review-04 |
-| 9 | T7 | `node --test tests/manifestos.test.js` | local | AGENTS.md autossuficiente permanece coberto | review-04 |
-| 10 | T7 | `npm.cmd test` | local | Pipeline sem companion obrigatório permanece coberto | review-04 |
-| 11 | T7 | `node --test tests/instructions.test.js` | local | Módulos carregam conforme a fase | review-04 |
-| 12 | T8 | conversa viva em `EXECUTE` | pendente | Resolução `pleno` verificada; forma da resposta ainda não observada | review-04 |
-| 13 | T3 | `node --test tests/hooks.test.js` | local | Override `enxuto: pleno` persiste sem mudar a fase | review-04 |
-| 14 | T8 | mensagem em inglês numa conversa viva | pendente | Regra publicada; resposta do agente ainda não observada | review-04 |
-| 15 | T6 | smoke test do OpenCode | pendente | Não executado por dispensa do usuário; sem alegação de compatibilidade viva | review-06 |
+| 1 | T8 | `claude plugin details stilo-code@stilo-code` | viva | histórico preservado; hooks reconhecidos | review-04 |
+| 2 | T8 | conversa em pasta sem `.stilo` | pendente | pendente | review-04 |
+| 3 | T8 | nova sessão com `phase: PLAN` | viva | histórico preservado | review-04 |
+| 4 | T8 | `/clear` durante `PLAN` | pendente | pendente | review-04 |
+| 5 | T8 | concluir `SPEC` em conversa viva | pendente | pendente | review-04 |
+| 6 | T3 | `node --test tests/hooks.test.js` | local | testes automáticos | review-04 |
+| 7 | T7 | `node --test tests/manifestos.test.js` | local | atendido | review-04 |
+| 8 | T7 | `node scripts/sync-adapters.js --check` | local | atendido após sincronização | review-04 |
+| 9 | T7 | `node --test tests/manifestos.test.js` | local | atendido | review-04 |
+| 10 | T7 | `npm.cmd test` sem companions | local | atendido quando a suíte passar | review-04 |
+| 11 | T7 | `node --test tests/instructions.test.js` | local | atendido | review-04 |
+| 12 | T8 | conversa viva em `EXECUTE` | pendente | pendente | review-04 |
+| 13 | T3 | estado legado com `enxuto` | local | override ignorado; testes | review-04 |
+| 14 | T8 | mensagem em inglês numa conversa viva | pendente | pendente | review-04 |
+| 15 | T6 | smoke test OpenCode | pendente | Não executado por dispensa do usuário; sem alegação de compatibilidade viva | review-06 |
+| 16 | T01 | inventário de manifestos, diretórios e testes | local | `tests/manifestos.test.js` | review-09 |
+| 17 | T02 | hooks em sessão nova e mensagem comum | pendente | pendente | review-09 |
+| 18 | T03 | teste de tamanho por fase | local | `tests/context.test.js` | review-09 |
+| 19 | T03 | fallback byte a byte | local | `tests/context.test.js` | review-09 |
+| 20 | T02 | validação de estado legado | local | `tests/state.test.js` | review-09 |
+| 21 | T05 | `cycle.json`, checkpoint e review-09 | local | rastreabilidade registrada | review-09 |
 
-## Limitações e validações vivas
+## Limitações
 
-Os critérios 2, 4, 5, 12 e 14 continuam pendentes. Eles exigem uma conversa real porque testes de hook provam o contexto injetado, mas não provam que o agente seguirá a instrução. O critério 15 foi dispensado pelo usuário nesta versão e permanece sem evidência viva.
-
-O smoke test de OpenCode não será executado nesta versão por decisão do usuário; não há validação viva do hook experimental. O fallback suportado é fornecer o `AGENTS.md` na raiz do projeto.
-
-GitHub Copilot CLI tem suporte manual por `AGENTS.md`; o pacote não publica manifesto de hooks para o Copilot.
+Os critérios 2, 4, 5, 12, 14 e 17 exigem uma conversa real e continuam pendentes. O
+critério 15 permanece dispensado; o fallback suportado é copiar `AGENTS.md` para o
+projeto. Nenhuma instalação ou publicação foi feita neste ciclo.
 
 ## Evidência histórica preservada
 
-- A instalação local e via GitHub retornou `Successfully installed (scope: user)` e reconheceu `Skills (2)` e `Hooks (3)`.
-- O teste de manifestos cobre o matcher `startup|resume|clear|compact` e o guard de PowerShell quando `node` não está no PATH.
-- A suíte cobre persistência de `enxuto`, seleção de módulos e sincronização dos seis adaptadores.
-- Os documentos e reviews de ciclos anteriores permanecem no repositório; `.stilo/cycle.json` apenas seleciona o ciclo atual.
-
-Use [evidencias-template.md](evidencias-template.md) para iniciar a matriz de um novo ciclo sem apagar esta história.
+Reviews `.stilo/review-01.md` a `.stilo/review-07.md`, checkpoints e evidências de ciclos
+anteriores não são apagados. O ciclo atual registra `baseReview: 7` em `.stilo/cycle.json`.

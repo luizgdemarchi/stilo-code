@@ -8,7 +8,7 @@ telegrafia, não é omitir informação. É tirar o que não carrega significado
 
 ## Nível por fase
 
-Quando `enxuto` é `auto` no `.stilo/state.json`:
+O nível efetivo é sempre derivado da fase; o campo legado `enxuto` não altera esta tabela:
 
 | Fase | Nível |
 |---|---|
@@ -17,7 +17,11 @@ Quando `enxuto` é `auto` no `.stilo/state.json`:
 | `EXECUTE`, `REVIEW`, `FIX` | `pleno` |
 | `DONE` | `off` |
 
-Um valor explícito no `state.json` sobrepõe a tabela inteira e persiste entre sessões.
+Mensagens do usuário não alteram o nível nem gravam configuração de compactação.
+
+Não confunda esta regra de saída com a compactação automática do contexto dos hooks. A
+compactação escolhe blocos inteiros por prioridade, sem resumir texto, e usa o contexto
+completo quando não consegue preservar os blocos protegidos.
 
 - **`leve`** — corta enchimento e cortesia, mantém frases inteiras e conectivos. O texto
   continua sendo prosa, e o documento continua legível daqui a um mês.

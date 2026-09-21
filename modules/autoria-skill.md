@@ -2,7 +2,8 @@
 
 **Gatilho: carregue este módulo só quando o projeto em si é uma skill ou um plugin de
 agente**, nas fases `PLAN` ou `EXECUTE`. Um projeto que apenas usa skills nunca lê este
-arquivo.
+arquivo. O Stilo Code não publica skills nem comandos próprios; este módulo orienta
+apenas projetos de terceiros que estejam sendo criados.
 
 ## Anatomia de um `SKILL.md`
 
@@ -19,12 +20,11 @@ Corpo: instruções, na ordem em que serão executadas.
 
 Regras do frontmatter:
 
-- `name` — kebab-case, igual ao nome da pasta que contém o arquivo. É o que vira o comando
-  `/nome`.
+- `name` — kebab-case, igual ao nome da pasta que contém o arquivo.
 - `description` — o campo mais importante do arquivo. É a única coisa que o agente lê
   antes de decidir carregar a skill; o corpo só entra em contexto depois.
-- `argument-hint` (opcional) — o que aparece ao lado do comando, ex.
-  `"[nome-do-projeto|off]"`.
+- `argument-hint` (opcional) — formato de argumentos da skill, quando o agente oferecer
+  essa superfície.
 
 O corpo é carregado **inteiro** quando a skill dispara. Escreva para ser executado, não
 para ser admirado: passos na ordem, formatos literais, exemplos de entrada e saída.
@@ -79,10 +79,10 @@ Cópias manuais do mesmo texto divergem em uma semana.
 
 | Agente | Arquivo |
 |---|---|
-| Claude Code | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `skills/<nome>/SKILL.md` |
-| Codex | `.codex-plugin/plugin.json`, `AGENTS.md`, `commands/*.toml` |
-| OpenCode | `opencode.json`, `.opencode/plugins/*.mjs`, `.opencode/command/` |
-| Gemini CLI | `gemini-extension.json`, `commands/*.toml` |
+| Claude Code | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `skills/<nome>/SKILL.md` do projeto |
+| Codex | `.codex-plugin/plugin.json`, `AGENTS.md` |
+| OpenCode | `opencode.json`, `.opencode/plugins/*.mjs` |
+| Gemini CLI | `gemini-extension.json` |
 | Cursor | `.cursor/rules/*.mdc` (frontmatter com `alwaysApply`) |
 | Windsurf | `.windsurf/rules/*.md` |
 | Cline | `.clinerules/*.md` |

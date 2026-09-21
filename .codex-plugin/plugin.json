@@ -10,7 +10,6 @@
   "repository": "https://github.com/luizgdemarchi/stilo-code",
   "license": "MIT",
   "keywords": ["pipeline", "workflow", "spec", "review", "estado"],
-  "skills": "./skills/",
   "hooks": "./hooks/claude-codex-hooks.json",
   "interface": {
     "displayName": "Stilo Code",

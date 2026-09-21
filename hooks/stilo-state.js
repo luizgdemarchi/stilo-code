@@ -160,7 +160,7 @@ function validateState(state) {
   if (!Number.isInteger(state.reviewRound) || state.reviewRound < 0) {
     errors.push('reviewRound deve ser um inteiro não negativo');
   }
-  if (typeof state.enxuto !== 'string' || !ENXUTO_VALIDOS.includes(state.enxuto)) {
+  if (state.enxuto !== undefined && (typeof state.enxuto !== 'string' || !ENXUTO_VALIDOS.includes(state.enxuto))) {
     errors.push(`enxuto deve ser um de: ${ENXUTO_VALIDOS.join(', ')}`);
   }
   return { valid: errors.length === 0, errors };
@@ -266,11 +266,9 @@ function writeCycle(cyclePath, cycle) {
   return writeJsonAtomic(cyclePath, completo) ? completo : null;
 }
 
-// "auto" (ou qualquer valor inválido) cai na tabela por fase; um nível explícito
-// sobrepõe a tabela inteira.
+// O campo enxuto legado é aceito para compatibilidade, mas o nível efetivo vem
+// exclusivamente da fase atual.
 function resolveEnxuto(state) {
-  const bruto = String((state && state.enxuto) || 'auto').trim().toLowerCase();
-  if (NIVEIS.includes(bruto)) return bruto;
   const fase = normalizeFase(state && state.phase);
   return fase ? ENXUTO_POR_FASE[fase] : 'off';
 }

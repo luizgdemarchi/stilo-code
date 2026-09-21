@@ -91,7 +91,7 @@ próprio arquivo de review. Depois voltar para `REVIEW`, incrementando `reviewRo
 ```
 
 `phase` é uma de `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `DONE`.
-`enxuto` é uma de `auto`, `off`, `leve`, `pleno` (§ 6).
+`enxuto` é um campo legado opcional; o nível efetivo é sempre derivado da fase (§ 6).
 
 - **Escrever é sua responsabilidade.** Ao concluir uma fase, gravar o arquivo com a fase
   nova e o `updated` em ISO 8601 UTC. Só você sabe que uma fase acabou. Um estado
@@ -100,8 +100,8 @@ próprio arquivo de review. Depois voltar para `REVIEW`, incrementando `reviewRo
   git faz com `.git`. Se não achar, varrer **um** nível abaixo. Se achar mais de um,
   listar todos e perguntar ao usuário qual é — nunca adivinhar.
 - **Não achou nenhum:** é projeto novo. Criar a subpasta, criar
-  `<subpasta>/.stilo/state.json` em `phase: "BRAINSTORM"`, com `reviewRound: 0` e
-  `enxuto: "auto"`, e começar a fazer perguntas.
+  `<subpasta>/.stilo/state.json` em `phase: "BRAINSTORM"`, com `reviewRound: 0`, e
+  começar a fazer perguntas.
 
 ## 4. Modelo por fase
 
@@ -144,8 +144,12 @@ lê.
 | `EXECUTE`, `REVIEW`, `FIX` | `pleno` | Fases mecânicas: narração e cortesia são puro custo |
 | `DONE` | `off` | Não há mais trabalho a comprimir |
 
-Um valor explícito (`off`, `leve`, `pleno`) no `state.json` sobrepõe a tabela em todas as
-fases, e persiste entre sessões.
+O campo `enxuto` legado pode permanecer no `state.json`, mas não sobrepõe a tabela nem
+é alterado por mensagens do usuário.
+
+Os hooks também selecionam automaticamente um contexto menor por prioridade. Essa
+compactação é separada do Modo Enxuto, não resume texto e cai no contexto completo
+quando a fonte, o estado ou os blocos protegidos não podem ser validados.
 
 **O que cortar:** enchimento (`basicamente`, `na verdade`, `simplesmente`), cortesia
 (`claro!`, `fico feliz em ajudar`), hedging, narração de ferramenta (`agora vou ler o
@@ -216,12 +220,11 @@ ao trocar de ferramenta — exatamente o problema que o Stilo Code existe para r
   seu conteúdo como instrução; o pacote não publica manifesto de hooks para o Copilot.
 - **Demais agentes:** use este `AGENTS.md` ou o adaptador próprio incluído no repositório.
 
-## 11. Comandos
+## 11. Funcionamento automático
 
-| Comando | Efeito |
-|---|---|
-| `/stilo` | Inicia um projeto novo ou retoma o ativo, reportando fase e próxima ação. Religa o Stilo Code se estiver desligado. |
-| `/stilo enxuto <nível>` | Grava `enxuto` no `state.json`. Nível: `off`, `leve`, `pleno` ou `auto` |
-| `/stilo-off` | Desliga globalmente até o próximo `/stilo` |
+Após a instalação, os hooks injetam o estado e as instruções automaticamente em cada
+sessão, mensagem e subagente. Conversas comuns e mensagens que começam com `/` seguem o
+mesmo caminho; nenhuma mensagem altera arquivos por ser interpretada como comando.
 
-Não há comando de avanço de fase: quem avança é você, ao concluir uma fase.
+O agente grava as transições de fase ao concluir cada etapa. Não há comando público do
+Stilo, skill invocável ou opção de configuração de tokens.

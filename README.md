@@ -59,14 +59,14 @@ O estado fica em `<projeto>/.stilo/state.json`:
 /plugin install stilo-code@stilo-code
 ```
 
-Instala as duas skills e os três hooks (`SessionStart`, `UserPromptSubmit`,
-`SubagentStart`). É a instalação completa: o estado é injetado sozinho, inclusive logo
+Instala os três hooks (`SessionStart`, `UserPromptSubmit`, `SubagentStart`). Não há skills
+ou comandos públicos do Stilo; o estado é injetado sozinho, inclusive logo
 depois de um `/clear`.
 
 ### Codex
 
 Mesmo pacote, mesmo manifesto de hooks. Aponte o Codex para o repositório clonado; o
-`.codex-plugin/plugin.json` traz as skills e os hooks. O carregador do Codex fornece
+`.codex-plugin/plugin.json` traz os hooks. O carregador do Codex fornece
 `CLAUDE_PLUGIN_ROOT` como alias compatível com o manifesto compartilhado.
 
 ### GitHub Copilot CLI
@@ -87,7 +87,7 @@ No seu `opencode.json`:
 { "plugin": ["/caminho/para/stilo-code/.opencode/plugins/stilo.mjs"] }
 ```
 
-O plugin registra `/stilo` e `/stilo-off`, mantém a injeção pelo hook experimental
+O plugin injeta o contexto automaticamente pelo hook experimental
 `experimental.chat.system.transform`. Se a versão do OpenCode não aceitar o hook, copie
 `AGENTS.md` para a raiz do projeto, onde o OpenCode o carrega como regra. Não use
 `config.instructions` como fallback no OpenCode V2; a integração viva só é confirmada
@@ -96,7 +96,7 @@ quando o smoke test da CLI é executado.
 ### Gemini CLI / Antigravity
 
 Clone o repositório e use o `gemini-extension.json`, que aponta o `AGENTS.md` como arquivo
-de contexto. Os comandos vêm de `commands/stilo.toml` e `commands/stilo-off.toml`.
+de contexto. A conversa natural aciona o pipeline; este pacote não publica comandos do Stilo.
 
 ### Cursor, Windsurf, Cline, Kiro, Qoder
 
@@ -120,16 +120,11 @@ agente lê e grava o `state.json`. O Qoder também aceita hooks — o template e
 Cole o `AGENTS.md` no agente. Ele é autossuficiente de propósito: sozinho, conduz o
 pipeline inteiro.
 
-## Comandos
+## Funcionamento automático
 
-| Comando | Efeito |
-|---|---|
-| `/stilo` | Inicia um projeto novo ou retoma o ativo, reportando fase e próxima ação |
-| `/stilo <nome>` | Cria a subpasta `<nome>/` e entra em `BRAINSTORM` |
-| `/stilo enxuto off\|leve\|pleno\|auto` | Ajusta a compressão de saída |
-| `/stilo-off` | Desliga globalmente até o próximo `/stilo` |
-
-Não há comando de avanço de fase: quem avança é o agente, ao concluir uma fase.
+Depois da instalação, os hooks detectam o projeto e injetam o estado e as instruções em
+cada sessão, mensagem e subagente. Mensagens comuns e prompts que começam com `/` seguem
+o mesmo caminho; nenhum texto de prompt altera arquivos.
 
 ## Modo Enxuto
 
@@ -150,7 +145,10 @@ Negações, números, versões, blocos de código e mensagens de erro são trava
 compressão nunca toca neles.
 
 O nível sai da fase: `off` em `BRAINSTORM`, `leve` em `SPEC` e `PLAN`, `pleno` em
-`EXECUTE`, `REVIEW` e `FIX`. `/stilo enxuto <nível>` sobrepõe e persiste.
+`EXECUTE`, `REVIEW` e `FIX`. O campo legado `enxuto` não sobrepõe a fase.
+
+Os hooks também compactam automaticamente o contexto por blocos prioritários. Essa
+compactação não resume texto e cai no contexto completo quando a validação falha.
 
 ## Companions
 

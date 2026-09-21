@@ -8,6 +8,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { normalizeFase, readCheckpoint, resolveEnxuto } = require('./stilo-state.js');
+const { selectContextBlocks } = require('./stilo-context.js');
+
+const CONTEXT_BUDGET = 16000;
 
 // Próxima ação concreta de cada fase. É o campo que impede o agente de retomar
 // um projeto sabendo a fase mas não o que fazer nela.
@@ -299,6 +302,35 @@ function buildFullContext(state, caminhos) {
   return partes.filter(Boolean).join('\n\n---\n\n');
 }
 
+function blocosDoContexto(texto) {
+  return String(texto || '')
+    .split(/\n{2}---\n{2}|\n(?=#{1,2}\s)/)
+    .map((bloco) => bloco.trim())
+    .filter(Boolean);
+}
+
+function buildInjectedContext(state, caminhos) {
+  const completo = buildFullContext(state, caminhos);
+  if (!lerArquivo('AGENTS.md')) return completo;
+  if (caminhos && ['unreadable', 'invalid', 'ambiguous'].includes(caminhos.status)) return completo;
+  const modulosProtegidos = modulosDaFase(state).flatMap((modulo) =>
+    blocosDoContexto(lerArquivo('modules', modulo))
+  );
+  const selecionado = selectContextBlocks(completo, {
+    budget: CONTEXT_BUDGET,
+    protected: [
+      'Regra 0',
+      'Regra 1',
+      '## Estado do Stilo Code',
+      'Travas de segurança',
+      'Negações',
+      'Mensagens de erro',
+      ...modulosProtegidos,
+    ],
+  });
+  return selecionado === null ? completo : selecionado;
+}
+
 // Ambiguidade é reportada, nunca resolvida por chute.
 function buildAmbiguityNote(caminhos) {
   return [
@@ -315,6 +347,7 @@ module.exports = {
   buildCheckpointNote,
   buildDoctorReport,
   buildFullContext,
+  buildInjectedContext,
   buildStateLine,
   modulosDaFase,
   pluginRoot,

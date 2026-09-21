@@ -6,13 +6,11 @@ const path = require('node:path');
 
 const {
   findStateFiles,
-  isOff,
   readCheckpoint,
   readCycle,
   readState,
   resolveEnxuto,
   resolveProjeto,
-  setOff,
   validateState,
   writeCheckpoint,
   writeCycle,
@@ -113,8 +111,9 @@ test('writeState cria o diretório, carimba updated e volta legível', () => {
   assert.deepStrictEqual(readState(p), escrito);
 });
 
-test('validateState aceita somente o schema completo da versão 1', () => {
+test('validateState aceita estado legado sem enxuto', () => {
   assert.deepStrictEqual(validateState(estadoValido()), { valid: true, errors: [] });
+  assert.deepStrictEqual(validateState(estadoValido({ enxuto: undefined })), { valid: true, errors: [] });
 
   const casos = [
     [estadoValido({ version: 2 }), /version/],
@@ -192,11 +191,10 @@ test('resolveEnxuto usa a tabela por fase quando o valor é auto', () => {
   assert.strictEqual(resolveEnxuto({ phase: 'FIX', enxuto: 'auto' }), 'pleno');
 });
 
-test('resolveEnxuto respeita a sobreposição explícita', () => {
-  // Critério 13 do spec: pleno durante BRAINSTORM sobrepõe o padrão da fase.
-  assert.strictEqual(resolveEnxuto({ phase: 'BRAINSTORM', enxuto: 'pleno' }), 'pleno');
-  assert.strictEqual(resolveEnxuto({ phase: 'EXECUTE', enxuto: 'off' }), 'off');
-  assert.strictEqual(resolveEnxuto({ phase: 'EXECUTE', enxuto: 'LEVE' }), 'leve');
+test('resolveEnxuto ignora override legado e deriva somente da fase', () => {
+  assert.strictEqual(resolveEnxuto({ phase: 'BRAINSTORM', enxuto: 'pleno' }), 'off');
+  assert.strictEqual(resolveEnxuto({ phase: 'EXECUTE', enxuto: 'off' }), 'pleno');
+  assert.strictEqual(resolveEnxuto({ phase: 'EXECUTE', enxuto: 'LEVE' }), 'pleno');
 });
 
 test('resolveEnxuto não quebra com estado ausente ou fase desconhecida', () => {
@@ -204,24 +202,6 @@ test('resolveEnxuto não quebra com estado ausente ou fase desconhecida', () => 
   assert.strictEqual(resolveEnxuto({}), 'off');
   assert.strictEqual(resolveEnxuto({ phase: 'INVENTADA', enxuto: 'auto' }), 'off');
   assert.strictEqual(resolveEnxuto({ phase: 'EXECUTE', enxuto: 'inventado' }), 'pleno');
-});
-
-test('isOff e setOff usam o flag em disco', () => {
-  const home = tmpdir();
-  const anterior = process.env.STILO_HOME;
-  process.env.STILO_HOME = path.join(home, '.stilo');
-  try {
-    assert.strictEqual(isOff(), false);
-    assert.strictEqual(setOff(true), true);
-    assert.strictEqual(isOff(), true);
-    assert.strictEqual(setOff(false), true);
-    assert.strictEqual(isOff(), false);
-    // Desligar duas vezes seguidas não é erro.
-    assert.strictEqual(setOff(false), true);
-  } finally {
-    if (anterior === undefined) delete process.env.STILO_HOME;
-    else process.env.STILO_HOME = anterior;
-  }
 });
 
 test('checkpoint usa schema completo, timestamp UTC e gravação atômica', () => {

@@ -361,3 +361,51 @@ são gerados por `scripts/sync-adapters.js`, e um teste falha se estiverem dessi
 | Agente esquece de atualizar `state.json` | Estado reinjetado a cada `UserPromptSubmit`, com a próxima ação explícita |
 | Ruleset diverge entre os 9 adaptadores | `sync-adapters.js` + teste de `--check` no CI |
 | Companion citado perde a portabilidade ou é abandonado | Critério de § 4.1 revalidado a cada release; degradação graciosa mantém o pipeline funcionando sem ele |
+
+## 14. Emenda do ciclo automático sem comandos
+
+Esta emenda substitui, para a próxima versão do pacote, as superfícies de comando,
+skills e overrides manuais descritas nas seções 3, 7, 8, 11 e nos critérios 6, 12 e 13.
+Reviews anteriores permanecem históricos e não são sobrescritos.
+
+### Objetivo
+
+Depois da instalação, o Stilo Code funciona automaticamente. O usuário conversa
+normalmente; os hooks detectam o projeto, injetam o estado e aplicam o pipeline sem
+comandos do Stilo, skills invocáveis ou configuração de tokens.
+
+### Requisitos
+
+1. O pacote não publica comandos nem skills do Stilo. Permanecem apenas os hooks,
+   adaptadores de regras e o `AGENTS.md` manual para agentes sem hooks.
+2. `UserPromptSubmit` não interpreta comandos: toda mensagem recebe a linha de estado;
+   Qoder recebe o contexto automático completo/compactado pelo mesmo caminho.
+3. `/stilo-off`, overrides de `enxuto`, `doctor`, `checkpoint` e `ciclo` deixam de ser
+   superfícies públicas. Diagnóstico, checkpoints e ciclos continuam como dados internos
+   opcionais lidos automaticamente quando existirem.
+4. O nível de saída é sempre derivado da fase. Um campo `enxuto` legado pode continuar
+   no `state.json` sem invalidar o arquivo, mas não altera o nível calculado.
+5. O contexto automático é compacto por prioridade e preserva regras de segurança,
+   estado, fase, próxima ação, comandos de shell citados nas regras, negações, números,
+   versões e mensagens de erro. Se a seleção falhar, o hook injeta o contexto completo.
+6. A compactação não usa rede, chave, modelo externo, transcript persistido ou opção de
+   configuração do usuário.
+7. `buildFullContext` continua disponível para compatibilidade interna; hooks automáticos
+   usam a nova seleção compacta. Manifestos de hooks não mudam de formato.
+8. O estado, reviews e checkpoints existentes não são apagados. Um novo ciclo registra
+   seu `baseReview` e preserva a evidência anterior.
+
+### Critérios de aceite adicionados/substituídos
+
+| # | Critério | Verificação |
+|---|---|---|
+| 16 | Nenhum comando ou skill do Stilo é publicado | inventário de manifestos, diretórios e testes |
+| 17 | Instalação ativa o pipeline sem configuração posterior | hooks em sessão nova e mensagem comum |
+| 18 | Contexto automático é menor que o completo quando há blocos opcionais | teste de tamanho por fase |
+| 19 | Contexto completo é usado quando fonte, estado ou seleção falha | testes de fallback byte a byte |
+| 20 | Estado legado com `enxuto` continua legível, sem override manual | testes de validação e nível por fase |
+| 21 | Reviews e pendências anteriores permanecem rastreáveis | `cycle.json`, `docs/aceite.md` e novo review |
+
+Os critérios vivos antigos sobre comandos e override de `enxuto` deixam de ser
+aplicáveis; os critérios vivos de criação natural, `/clear`, transição de fase e idioma
+continuam pendentes até serem observados em uma sessão real.

@@ -1,15 +1,15 @@
 # Caderno de bordo — Stilo Code
 
-Atualizado: 2026-09-17T12:35:39Z
+Atualizado: 2026-09-21T11:12:55Z
 
 ## Estado persistido
 
 - Projeto: `stilo-code`
 - Fase: `REVIEW`
-- Rodada: `7`
+- Rodada: `9`
 - Modo enxuto efetivo: `pleno` (state: `auto`)
-- Commits locais: `d57264c test: proteger orçamento nominal de contexto`; `9913069 fix: registrar rodada final de revisão e proteger hooks`; `e37d66f docs: salvar caderno de bordo da retomada`
-- Working tree: limpa após o commit deste checkpoint
+- Commits locais: base `45df052`; ciclo automático sem comandos ainda não commitado.
+- Working tree: correção do `review-08` aplicada; `review-09` limpo.
 
 ## Concluído
 
@@ -21,8 +21,11 @@ Atualizado: 2026-09-17T12:35:39Z
 - Documentação sobre a diferença entre checkout e plugin instalado em `README.md` e
   `README.en.md`.
 - `review-07` registrado com 0 achados após re-review independente.
+- T01–T05 do ciclo automático sem comandos implementadas; comandos e skills públicos removidos.
+- Compactação automática local com fallback para contexto completo implementada e testada.
+- `review-08` corrigido: módulos aplicáveis agora são prioritários na compactação.
 - `claude plugin validate .`: passou.
-- `OPENCODE_BIN='' node --test tests/all.test.js`: 91 testes, 90 passados, 1 smoke pendente.
+- `npm.cmd test`: 72 testes, 71 passados, 1 smoke pendente.
 - `node --test tests/instructions.test.js`: 15/15 passados.
 - `node scripts/sync-adapters.js --check`: passou.
 - `npm.cmd run validate-plan`: 8 tarefas, 6 ondas, passou.
@@ -44,8 +47,14 @@ criação de projeto.
   autorizada.
 - Não marcar `DONE` enquanto a evidência obrigatória continuar pendente.
 
+## Novo ciclo — automático sem comandos
+
+- Escopo: remover comandos e skills públicos; hooks automáticos; compactação local de contexto.
+- Base: `reviewRound: 7`; reviews anteriores permanecem históricos.
+- Plano: `docs/superpowers/plans/2026-09-18-automatico-sem-comandos-plan.md`.
+- Pendências vivas anteriores continuam pendentes até evidência em agente instalado.
+
 ## Próxima ação
 
-Manter a fase `REVIEW`: os critérios vivos 2, 4, 5, 12 e 14 ainda exigem evidência externa;
-o critério 15 permanece dispensado. Não reinstalar/publicar o plugin sem autorização.
-Uma redução real do contexto exigiria revisão da especificação e novo ciclo.
+`review-09` está limpo. Permanecer em `REVIEW` enquanto os critérios vivos continuarem
+pendentes; não reinstalar/publicar o plugin sem autorização.

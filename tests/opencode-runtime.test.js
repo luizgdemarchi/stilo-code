@@ -23,10 +23,17 @@ function localizarOpenCode() {
 }
 
 const opencode = localizarOpenCode();
+const smokeAtivado = process.env.RUN_OPENCODE_SMOKE === '1';
 
 test(
   'OpenCode recebe o Estado do Stilo Code em modo não interativo',
-  { skip: opencode ? false : 'OpenCode CLI ausente; smoke test pendente' },
+  {
+    skip: !smokeAtivado
+      ? 'Smoke OpenCode opt-in; defina RUN_OPENCODE_SMOKE=1 em uma sessão OpenCode'
+      : opencode
+        ? false
+        : 'OpenCode CLI ausente; smoke test pendente',
+  },
   () => {
     const projeto = `stilo-smoke-${randomUUID()}`;
     const temporario = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-opencode-'));

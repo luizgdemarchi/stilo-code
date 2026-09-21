@@ -62,14 +62,14 @@ State lives in `<project>/.stilo/state.json`:
 /plugin install stilo-code@stilo-code
 ```
 
-Installs both skills and all three hooks (`SessionStart`, `UserPromptSubmit`,
-`SubagentStart`). This is the full install: state is injected on its own, including right
+Installs all three hooks (`SessionStart`, `UserPromptSubmit`, `SubagentStart`). Stilo
+publishes no commands or skills; state is injected on its own, including right
 after a `/clear`.
 
 ### Codex
 
 Same package, same hook manifest. Point Codex at the cloned repo;
-`.codex-plugin/plugin.json` carries the skills and hooks. Codex exposes
+`.codex-plugin/plugin.json` carries the hooks. Codex exposes
 `CLAUDE_PLUGIN_ROOT` as a compatibility alias for the shared manifest.
 
 ### GitHub Copilot CLI
@@ -90,7 +90,7 @@ In your `opencode.json`:
 { "plugin": ["/path/to/stilo-code/.opencode/plugins/stilo.mjs"] }
 ```
 
-The plugin registers `/stilo` and `/stilo-off`, keeps injection through the experimental
+The plugin injects context automatically through the experimental
 `experimental.chat.system.transform` hook. If the installed OpenCode version does not
 accept the hook, copy `AGENTS.md` to the project root, where OpenCode loads it as a rule.
 Do not use `config.instructions` as the fallback on OpenCode V2; live compatibility is
@@ -99,7 +99,7 @@ confirmed only when the CLI smoke test runs.
 ### Gemini CLI / Antigravity
 
 Clone the repo and use `gemini-extension.json`, which points at `AGENTS.md` as the context
-file. Commands come from `commands/stilo.toml` and `commands/stilo-off.toml`.
+file. This package publishes no Stilo commands; normal conversation activates the pipeline.
 
 ### Cursor, Windsurf, Cline, Kiro, Qoder
 
@@ -123,16 +123,11 @@ agent reads and writes `state.json` itself. Qoder also supports hooks â€” the te
 Paste `AGENTS.md` into the agent. It is self-sufficient by design: on its own, it runs the
 whole pipeline.
 
-## Commands
+## Automatic operation
 
-| Command | Effect |
-|---|---|
-| `/stilo` | Starts a new project or resumes the active one, reporting phase and next action |
-| `/stilo <name>` | Creates the `<name>/` subfolder and enters `BRAINSTORM` |
-| `/stilo enxuto off\|leve\|pleno\|auto` | Adjusts output compression |
-| `/stilo-off` | Turns the pipeline off globally until the next `/stilo` |
-
-There is no phase-advance command: the agent advances when it finishes a phase.
+After installation, hooks detect the project and inject state and instructions into every
+session, message and subagent. Normal messages and prompts beginning with `/` follow the
+same path; prompt text never mutates files.
 
 ## Lean Mode (`enxuto`)
 
@@ -153,8 +148,10 @@ Negations, numbers, versions, code blocks and error messages are safety locks â€
 never touches them.
 
 The level comes from the phase: `off` in `BRAINSTORM`, `leve` (light) in `SPEC` and `PLAN`,
-`pleno` (full) in `EXECUTE`, `REVIEW` and `FIX`. `/stilo enxuto <level>` overrides and
-persists.
+`pleno` (full) in `EXECUTE`, `REVIEW` and `FIX`. Legacy `enxuto` state does not override it.
+
+Hooks also compact context automatically by prioritized blocks. This does not summarize
+text and falls back to the full context whenever validation fails.
 
 ## Companions
 

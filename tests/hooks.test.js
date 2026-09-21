@@ -7,23 +7,18 @@ const { spawnSync } = require('node:child_process');
 const { EventEmitter } = require('node:events');
 const { installStdoutGuard } = require('../hooks/stilo-runtime.js');
 
-const RAIZ = path.join(__dirname, '..');
-const HOOKS = path.join(RAIZ, 'hooks');
+const HOOKS = path.join(__dirname, '..', 'hooks');
 
 test('stdout fechado não transforma EPIPE em falha do processo', () => {
   const stdout = new EventEmitter();
   installStdoutGuard(stdout);
-  assert.doesNotThrow(() => {
-    stdout.emit('error', Object.assign(new Error('pipe fechado'), { code: 'EPIPE' }));
-  });
+  assert.doesNotThrow(() => stdout.emit('error', Object.assign(new Error('pipe fechado'), { code: 'EPIPE' })));
 });
 
 function tmpdir() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-hook-')));
 }
 
-// Cada caso roda num home próprio, para o flag global de off de um teste não
-// vazar para o outro.
 function cenario(state) {
   const raiz = tmpdir();
   const projeto = path.join(raiz, 'projeto');
@@ -34,16 +29,9 @@ function cenario(state) {
       statePath,
       typeof state === 'string'
         ? state
-        : JSON.stringify(
-            Object.assign(
-              { version: 1, project: 'meu-app', phase: 'PLAN', reviewRound: 0, enxuto: 'auto' },
-              state
-            )
-          )
+        : JSON.stringify(Object.assign({ version: 1, project: 'meu-app', phase: 'PLAN', reviewRound: 0 }, state))
     );
-  } else {
-    fs.mkdirSync(projeto, { recursive: true });
-  }
+  } else fs.mkdirSync(projeto, { recursive: true });
   return { raiz, projeto, statePath, home: path.join(raiz, 'home-stilo') };
 }
 
@@ -56,468 +44,108 @@ function rodaHook(arquivo, { cwd, home, stdin, env }) {
   });
 }
 
-test('SessionStart injeta ruleset e estado do projeto', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
-
+test('SessionStart injeta contexto e estado do projeto', () => {
+  const c = cenario({ phase: 'PLAN', enxuto: 'auto' });
   const r = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home });
-
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /Stilo Code — pipeline de projeto/);
   assert.match(r.stdout, /\*\*Fase:\*\* PLAN/);
   assert.match(r.stdout, /escrever plan\.md/);
 });
 
-test('SessionStart com o flag de off não injeta nada', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN' });
+test('SessionStart ignora flag legado e continua automático', () => {
+  const c = cenario({ phase: 'PLAN' });
   fs.mkdirSync(c.home, { recursive: true });
   fs.writeFileSync(path.join(c.home, 'off'), '');
-
   const r = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home });
-
   assert.strictEqual(r.status, 0);
-  assert.strictEqual(r.stdout, '');
-});
-
-test('SessionStart com state.json corrompido sai com código 0', () => {
-  const c = cenario('{ isto não é json');
-
-  const r = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home });
-
-  assert.strictEqual(r.status, 0);
-  // Sem estado legível, ainda injeta o ruleset e manda começar em BRAINSTORM.
   assert.match(r.stdout, /Stilo Code — pipeline de projeto/);
-  assert.match(r.stdout, /BRAINSTORM/);
 });
 
-test('SessionStart reporta ambiguidade quando há dois projetos', () => {
+test('state.json corrompido não quebra e orienta correção', () => {
+  const c = cenario('{ isto não é json');
+  const r = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home });
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /state\.json/);
+  assert.match(r.stdout, /ilegível/);
+});
+
+test('SessionStart reporta ambiguidade sem mandar criar projeto', () => {
   const raiz = tmpdir();
   for (const nome of ['app-a', 'app-b']) {
     const dir = path.join(raiz, nome, '.stilo');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ phase: 'PLAN' }));
   }
-
-  const r = rodaHook('stilo-activate.js', {
-    cwd: raiz,
-    home: path.join(raiz, 'home-stilo'),
-  });
-
+  const r = rodaHook('stilo-activate.js', { cwd: raiz, home: path.join(raiz, 'home-stilo') });
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /mais de um projeto encontrado/);
-  assert.match(r.stdout, /app-a/);
-  assert.match(r.stdout, /app-b/);
+  assert.doesNotMatch(r.stdout, /Nenhum `\.stilo\/state\.json` encontrado/);
 });
 
-test('SubagentStart envelopa o contexto em hookSpecificOutput', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'EXECUTE' });
-
+test('SubagentStart envelopa o contexto automático', () => {
+  const c = cenario({ phase: 'EXECUTE' });
   const r = rodaHook('stilo-subagent.js', { cwd: c.projeto, home: c.home });
-
-  assert.strictEqual(r.status, 0);
   const saida = JSON.parse(r.stdout);
   assert.strictEqual(saida.hookSpecificOutput.hookEventName, 'SubagentStart');
   assert.match(saida.hookSpecificOutput.additionalContext, /\*\*Fase:\*\* EXECUTE/);
 });
 
-test('UserPromptSubmit injeta a linha de estado numa mensagem comum', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: 'como está o projeto?', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.strictEqual(r.stdout.includes('\n'), false);
-  assert.match(r.stdout, /fase=PLAN/);
-  assert.match(r.stdout, /enxuto=leve/);
-});
-
-test('/stilo-off grava o flag e /stilo o remove', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN' });
-  const flag = path.join(c.home, 'off');
-
-  const off = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo-off', cwd: c.projeto }),
-  });
-  assert.strictEqual(off.status, 0);
-  assert.strictEqual(fs.existsSync(flag), true);
-  assert.match(off.stdout, /STILO OFF/);
-
-  // Enquanto desligado, mensagem comum não injeta nada.
-  const calado = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: 'oi', cwd: c.projeto }),
-  });
-  assert.strictEqual(calado.stdout, '');
-
-  const on = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo', cwd: c.projeto }),
-  });
-  assert.strictEqual(on.status, 0);
-  assert.strictEqual(fs.existsSync(flag), false);
-  assert.match(on.stdout, /Stilo Code — pipeline de projeto/);
-});
-
-test('/stilo-code:stilo-off funciona com o namespace do plugin', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN' });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo-code:stilo-off', cwd: c.projeto }),
-  });
-
-  assert.match(r.stdout, /STILO OFF/);
-  assert.strictEqual(fs.existsSync(path.join(c.home, 'off')), true);
-});
-
-test('/stilo enxuto pleno persiste no state.json', () => {
-  // Critério 13 do spec: sobrepõe o padrão da fase e sobrevive à sessão.
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'BRAINSTORM', enxuto: 'auto' });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo enxuto pleno', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  const gravado = JSON.parse(fs.readFileSync(c.statePath, 'utf8'));
-  assert.strictEqual(gravado.enxuto, 'pleno');
-  assert.strictEqual(gravado.phase, 'BRAINSTORM');
-  assert.match(r.stdout, /nível efetivo: pleno/);
-});
-
-test('/stilo enxuto com nível inválido não grava nada', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo enxuto turbo', cwd: c.projeto }),
-  });
-
-  assert.match(r.stdout, /nível inválido/);
-  assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'auto');
-});
-
-test('UserPromptSubmit sem projeto manda começar em BRAINSTORM', () => {
-  const c = cenario(null);
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: 'quero um app novo', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.match(r.stdout, /nenhum projeto ativo/);
-  assert.match(r.stdout, /BRAINSTORM/);
-});
-
-test('stdin vazio ou inválido não quebra o hook', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN' });
-
-  for (const entrada of ['', 'isto não é json', '﻿{"prompt":"oi"}']) {
+test('UserPromptSubmit injeta a linha na mensagem comum e em prompt com barra', () => {
+  const c = cenario({ phase: 'PLAN', enxuto: 'pleno' });
+  for (const prompt of ['como está o projeto?', '/stilo-off', '/qualquer coisa']) {
     const r = rodaHook('stilo-prompt.js', {
       cwd: c.projeto,
       home: c.home,
-      stdin: entrada,
+      stdin: JSON.stringify({ prompt, cwd: c.projeto }),
     });
-    assert.strictEqual(r.status, 0, `entrada: ${JSON.stringify(entrada)}`);
+    assert.strictEqual(r.status, 0);
+    assert.match(r.stdout, /fase=PLAN/);
   }
+  assert.strictEqual(fs.existsSync(path.join(c.home, 'off')), false);
+  assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).phase, 'PLAN');
 });
 
-test('no Codex a saída é sempre JSON com hookSpecificOutput', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN' });
-
-  const r = rodaHook('stilo-activate.js', {
+test('prompt arbitrário não grava estado nem ciclo', () => {
+  const c = cenario({ phase: 'REVIEW', reviewRound: 7, enxuto: 'auto' });
+  const antes = fs.readFileSync(c.statePath, 'utf8');
+  const r = rodaHook('stilo-prompt.js', {
     cwd: c.projeto,
     home: c.home,
-    env: { PLUGIN_DATA: c.home },
+    stdin: JSON.stringify({ prompt: '/stilo ciclo automatico-sem-comandos', cwd: c.projeto }),
   });
-
   assert.strictEqual(r.status, 0);
-  const saida = JSON.parse(r.stdout);
-  assert.strictEqual(saida.hookSpecificOutput.hookEventName, 'SessionStart');
-  assert.match(saida.hookSpecificOutput.additionalContext, /\*\*Fase:\*\* PLAN/);
+  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), antes);
+  assert.strictEqual(fs.existsSync(path.join(c.projeto, '.stilo', 'cycle.json')), false);
 });
 
-test('no Qoder o UserPromptSubmit carrega o ruleset inteiro', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN' });
-
+test('Qoder recebe o mesmo contexto automático', () => {
+  const c = cenario({ phase: 'PLAN', enxuto: 'auto' });
   const r = rodaHook('stilo-prompt.js', {
     cwd: c.projeto,
     home: c.home,
     stdin: JSON.stringify({ prompt: 'oi', cwd: c.projeto }),
     env: { QODER_SESSION_ID: 'abc' },
   });
-
-  assert.strictEqual(r.status, 0);
   const saida = JSON.parse(r.stdout);
   assert.match(saida.hookSpecificOutput.additionalContext, /Stilo Code — pipeline de projeto/);
+  assert.match(saida.hookSpecificOutput.additionalContext, /\*\*Fase:\*\* PLAN/);
+});
+
+test('stdin vazio ou inválido não quebra o hook', () => {
+  const c = cenario({ phase: 'PLAN' });
+  for (const entrada of ['', 'isto não é json', '﻿{"prompt":"oi"}']) {
+    const r = rodaHook('stilo-prompt.js', { cwd: c.projeto, home: c.home, stdin: entrada });
+    assert.strictEqual(r.status, 0);
+  }
 });
 
 test('cwd inválido no payload cai no cwd do processo', () => {
-  // Achado do passo 13: um caminho estilo POSIX vindo do agente resolvia para
-  // um diretório inexistente e o projeto sumia silenciosamente.
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
-
+  const c = cenario({ phase: 'PLAN', enxuto: 'auto' });
   const r = rodaHook('stilo-prompt.js', {
     cwd: c.projeto,
     home: c.home,
-    stdin: JSON.stringify({ prompt: 'oi', cwd: '/nao/existe/em/lugar/nenhum' }),
+    stdin: JSON.stringify({ prompt: 'oi', cwd: '/nao/existe' }),
   });
-
-  assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /fase=PLAN/);
-});
-
-test('/stilo enxuto grava mesmo com cwd inválido no payload', () => {
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'BRAINSTORM', enxuto: 'auto' });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo enxuto pleno', cwd: '/nao/existe' }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'pleno');
-});
-
-test('/stilo enxuto não sobrescreve um state.json ilegível', () => {
-  // Review 01, achado 1: gravar por cima apagava project e phase.
-  const c = cenario('{ "project": "meu-app", "phase": "EXECUTE"  <<<corrompido');
-  const antes = fs.readFileSync(c.statePath, 'utf8');
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo enxuto pleno', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.match(r.stdout, /ilegível/);
-  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), antes);
-});
-
-test('fase inválida é reportada, não trocada por BRAINSTORM', () => {
-  // Review 01, achado 2.
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'EXECUTANDO' });
-
-  const linha = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: 'oi', cwd: c.projeto }),
-  });
-  assert.match(linha.stdout, /fase inválida/);
-  assert.match(linha.stdout, /EXECUTANDO/);
-  assert.strictEqual(/fase=BRAINSTORM/.test(linha.stdout), false);
-
-  const sessao = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home });
-  assert.match(sessao.stdout, /valor inválido no `state\.json`/);
-  assert.match(sessao.stdout, /EXECUTANDO/);
-  assert.match(sessao.stdout, /não recomece o projeto/);
-});
-
-test('com dois projetos o contexto não manda criar um terceiro', () => {
-  // Review 01, achado 3: "nenhum encontrado" e "mais de um" na mesma injeção.
-  const raiz = tmpdir();
-  for (const nome of ['app-a', 'app-b']) {
-    const dir = path.join(raiz, nome, '.stilo');
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ phase: 'PLAN' }));
-  }
-  const home = path.join(raiz, 'home-stilo');
-
-  const sessao = rodaHook('stilo-activate.js', { cwd: raiz, home });
-  assert.match(sessao.stdout, /mais de um projeto encontrado/);
-  assert.strictEqual(/Nenhum `\.stilo\/state\.json` encontrado/.test(sessao.stdout), false);
-  assert.strictEqual(/Se o usuário pedir um projeto novo/.test(sessao.stdout), false);
-
-  const linha = rodaHook('stilo-prompt.js', {
-    cwd: raiz,
-    home,
-    stdin: JSON.stringify({ prompt: 'oi', cwd: raiz }),
-  });
-  assert.strictEqual(linha.stdout.includes('\n'), false);
-  assert.match(linha.stdout, /2 projetos encontrados/);
-});
-
-test('writeState não deixa o state.json truncado nem lixo temporário', () => {
-  // Review 01, achado 4: grava ao lado e renomeia.
-  const c = cenario({ version: 1, project: 'meu-app', phase: 'PLAN', enxuto: 'auto' });
-
-  rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo enxuto leve', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(JSON.parse(fs.readFileSync(c.statePath, 'utf8')).enxuto, 'leve');
-  assert.strictEqual(fs.existsSync(c.statePath + '.tmp'), false);
-});
-
-test('/stilo-off não confirma quando o flag não pode ser gravado', () => {
-  const c = cenario({ phase: 'PLAN' });
-  const flag = path.join(c.home, 'off');
-  fs.mkdirSync(flag, { recursive: true });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo-off', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.doesNotMatch(r.stdout, /STILO OFF/);
-  assert.match(r.stdout, /não mudou|não consegui/);
-  assert.strictEqual(fs.statSync(flag).isDirectory(), true);
-});
-
-test('/stilo não confirma religação quando o flag não pode ser removido', () => {
-  const c = cenario({ phase: 'PLAN' });
-  const flag = path.join(c.home, 'off');
-  fs.mkdirSync(flag, { recursive: true });
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.doesNotMatch(r.stdout, /Stilo Code — pipeline de projeto/);
-  assert.match(r.stdout, /não mudou|não consegui/);
-  assert.strictEqual(fs.statSync(flag).isDirectory(), true);
-});
-
-test('/stilo checkpoint orienta quando ausente e exibe checkpoint válido', () => {
-  const c = cenario({ phase: 'EXECUTE' });
-
-  const ausente = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo checkpoint', cwd: c.projeto }),
-  });
-  assert.match(ausente.stdout, /checkpoint\.json/);
-  assert.match(ausente.stdout, /decisions/);
-
-  fs.writeFileSync(
-    path.join(c.projeto, '.stilo', 'checkpoint.json'),
-    JSON.stringify({
-      version: 1,
-      cycle: 'retomada',
-      phase: 'EXECUTE',
-      task: 'T3',
-      decisions: ['gravação atômica'],
-      verified: ['T2 concluída'],
-      pending: ['rodar suíte'],
-      nextAction: 'implementar comandos',
-      updated: '2026-09-07T12:00:00Z',
-    })
-  );
-
-  const valido = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo checkpoint', cwd: c.projeto }),
-  });
-  assert.match(valido.stdout, /T3/);
-  assert.match(valido.stdout, /implementar comandos/);
-  assert.match(valido.stdout, /rodar suíte/);
-});
-
-test('/stilo checkpoint não sobrescreve checkpoint corrompido nem state.json', () => {
-  const c = cenario({ phase: 'EXECUTE' });
-  const checkpointPath = path.join(c.projeto, '.stilo', 'checkpoint.json');
-  fs.writeFileSync(checkpointPath, '{ truncado');
-  const stateAntes = fs.readFileSync(c.statePath, 'utf8');
-  const checkpointAntes = fs.readFileSync(checkpointPath, 'utf8');
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo checkpoint', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.match(r.stdout, /inválido|ilegível/);
-  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), stateAntes);
-  assert.strictEqual(fs.readFileSync(checkpointPath, 'utf8'), checkpointAntes);
-});
-
-test('/stilo ciclo grava somente cycle.json e valida o slug', () => {
-  const c = cenario({ phase: 'REVIEW', reviewRound: 4 });
-  const stateAntes = fs.readFileSync(c.statePath, 'utf8');
-
-  const maiusculo = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo ciclo Ab', cwd: c.projeto }),
-  });
-  assert.match(maiusculo.stdout, /slug inválido/);
-
-  const invalido = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo ciclo Inválido!', cwd: c.projeto }),
-  });
-  assert.match(invalido.stdout, /slug inválido/);
-  assert.strictEqual(fs.existsSync(path.join(c.projeto, '.stilo', 'cycle.json')), false);
-
-  const valido = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo ciclo retomada-2026', cwd: c.projeto }),
-  });
-  assert.match(valido.stdout, /retomada-2026/);
-  const ciclo = JSON.parse(fs.readFileSync(path.join(c.projeto, '.stilo', 'cycle.json'), 'utf8'));
-  assert.strictEqual(ciclo.id, 'retomada-2026');
-  assert.strictEqual(ciclo.baseReview, 4);
-  assert.match(ciclo.started, /^\d{4}-\d{2}-\d{2}T/);
-  assert.strictEqual(fs.readFileSync(c.statePath, 'utf8'), stateAntes);
-});
-
-test('/stilo doctor relata o diagnóstico sem escrever', () => {
-  const c = cenario({ phase: 'EXECUTE' });
-  const antes = fs.readdirSync(path.join(c.projeto, '.stilo')).sort();
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo doctor', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.match(r.stdout, /state.*válido/i);
-  assert.match(r.stdout, /checkpoint.*ausente/i);
-  assert.deepStrictEqual(fs.readdirSync(path.join(c.projeto, '.stilo')).sort(), antes);
-});
-
-test('/stilo doctor preserva o flag global de off', () => {
-  const c = cenario({ phase: 'EXECUTE' });
-  const flag = path.join(c.home, 'off');
-  fs.mkdirSync(c.home, { recursive: true });
-  fs.writeFileSync(flag, '');
-  const antes = fs.readFileSync(flag, 'utf8');
-
-  const r = rodaHook('stilo-prompt.js', {
-    cwd: c.projeto,
-    home: c.home,
-    stdin: JSON.stringify({ prompt: '/stilo doctor', cwd: c.projeto }),
-  });
-
-  assert.strictEqual(r.status, 0);
-  assert.match(r.stdout, /stilo doctor: state válido/i);
-  assert.strictEqual(fs.existsSync(flag), true);
-  assert.strictEqual(fs.readFileSync(flag, 'utf8'), antes);
 });
