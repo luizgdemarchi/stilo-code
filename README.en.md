@@ -162,13 +162,21 @@ prompt to install.
 | Companion | Where it helps |
 |---|---|
 | `superpowers` | `BRAINSTORM`, `PLAN`, `EXECUTE` |
-| `ponytail` | `EXECUTE`, `FIX` — keeps the diff minimal |
+| `ponytail` | `EXECUTE`, `FIX` — keeps the diff minimal; `DONE` — optional simplification audit |
 | `context7` (MCP) | `SPEC`, `PLAN` — up-to-date library docs |
 | `playwright` (MCP) | `EXECUTE`, `REVIEW` — verify in a real browser |
 
 Only packages that install in nearly every agent make this list: an MCP server, or a repo
 shipping multi-agent adapters. A tool tied to a single agent creates a pipeline that breaks
 when you switch tools — the very problem this package exists to solve.
+
+### Optional audit
+
+After a clean `REVIEW/FIX`, the agent may offer a consultative simplification audit. It uses
+`ponytail-audit` when already available, or the built-in instructions otherwise. The
+optional output is `.stilo/cleanup-NN.md`, with evidence, risk, minimal removal and a
+verification path for each suggestion. The audit never deletes, moves or edits files, never
+installs a companion, and never blocks `DONE`.
 
 ## Language
 

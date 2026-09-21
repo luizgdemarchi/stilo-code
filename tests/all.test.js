@@ -1,6 +1,7 @@
 require('./diagnostics.test.js');
 require('./hooks.test.js');
 require('./instructions.test.js');
+require('./audit.test.js');
 require('./manifestos.test.js');
 require('./opencode-runtime.test.js');
 require('./orchestration.test.js');

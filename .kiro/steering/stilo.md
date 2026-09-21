@@ -77,6 +77,12 @@ depois libera a revisão.
 **FIX** — resolver cada achado do review mais recente, marcando o estado de cada um no
 próprio arquivo de review. Depois voltar para `REVIEW`, incrementando `reviewRound`.
 
+**DONE** — após `REVIEW/FIX` limpo, ofereça uma auditoria opcional. Use `ponytail-audit` se
+disponível; sem ele, siga `modules/auditoria.md`. Grave só recomendações em
+`.stilo/cleanup-NN.md`, sem comando/dependência, apagar, mover ou editar arquivos. Inclua
+evidência, risco, remoção, validação e classificação; áreas protegidas exigem confirmação.
+Aceitação retorna a `FIX` → `REVIEW`; ignorar não bloqueia `DONE`
+
 ## 3. Estado em disco — `.stilo/state.json`
 
 ```json
@@ -126,9 +132,7 @@ gatilho vale.
 | `modules/revisor.md` | Fase `REVIEW` |
 | `modules/frontend.md` | `EXECUTE` ou `REVIEW`, **e** o diff toca interface de usuário |
 | `modules/autoria-skill.md` | `PLAN` ou `EXECUTE`, **e** o projeto **é** uma skill ou plugin de agente |
-
-Carregar um módulo fora do gatilho é desperdício de contexto: um projeto de CLI nunca lê
-`modules/frontend.md`.
+| `modules/auditoria.md` | `DONE` após review limpo |
 
 ## 6. Modo Enxuto — compressão da saída
 
@@ -202,7 +206,7 @@ instalação.
 | Companion | Onde ajuda |
 |---|---|
 | `superpowers` | `BRAINSTORM`, `PLAN`, `EXECUTE` |
-| `ponytail` | `EXECUTE`, `FIX` — mantém o diff mínimo |
+| `ponytail` | `EXECUTE`, `FIX` — mantém o diff mínimo; `DONE` — auditoria opcional de simplificação |
 | `context7` (MCP) | `SPEC`, `PLAN` — documentação atualizada de biblioteca |
 | `playwright` (MCP) | `EXECUTE`, `REVIEW` — verificar em navegador de verdade |
 

@@ -105,7 +105,7 @@ test('diagnoseProject aponta DONE com evidência obrigatória pendente sem alter
     [
       '| Critério | Tarefa | Comando | Tipo | Resultado | Review |',
       '|---|---|---|---|---|---|',
-      ...Array.from({ length: 21 }, (_, index) => {
+      ...Array.from({ length: 27 }, (_, index) => {
         const criterion = index + 1;
         const type = criterion === 2 ? 'pendente' : 'local';
         return `| ${criterion} | T5 | teste ${criterion} | ${type} | resultado ${criterion} | review-05 |`;
@@ -122,7 +122,7 @@ test('diagnoseProject aponta DONE com evidência obrigatória pendente sem alter
   assert.strictEqual(diagnostico.completion.mandatory, true);
   assert.deepStrictEqual(diagnostico.completion.criteria, ['2']);
   assert.match(diagnostico.completion.reason, /evidência obrigatória pendente/i);
-  assert.strictEqual(diagnostico.evidence.criteria.length, 21);
+  assert.strictEqual(diagnostico.evidence.criteria.length, 27);
   assert.deepStrictEqual(diagnostico.evidence.errors, []);
   assert.strictEqual(fs.readFileSync(statePath, 'utf8'), antes);
   assert.deepStrictEqual(fs.readdirSync(stilo).sort(), ['state.json']);
@@ -148,11 +148,11 @@ test('readEvidence separa tipos e relata linha inválida', () => {
   assert.deepStrictEqual(evidence.criteria.map((item) => [item.criterion, item.type]), [['1', 'local']]);
   assert.deepStrictEqual(evidence.errors, [
     'linha 4: tipo deve ser local, viva ou pendente',
-    'critérios obrigatórios ausentes: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21',
+    'critérios obrigatórios ausentes: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27',
   ]);
 });
 
-test('readEvidence exige cobertura única dos 21 critérios e mantém DONE pendente', () => {
+test('readEvidence exige cobertura única dos 27 critérios e mantém DONE pendente', () => {
   const raiz = tmpdir();
   const { projeto } = criaProjeto(raiz, estado({ phase: 'DONE', reviewRound: 0 }));
   fs.writeFileSync(path.join(projeto, 'spec.md'), '# Spec\n');
@@ -172,17 +172,17 @@ test('readEvidence exige cobertura única dos 21 critérios e mantém DONE pende
   const diagnostico = diagnoseProject(projeto);
 
   assert.deepStrictEqual(diagnostico.evidence.duplicates, ['1']);
-  assert.deepStrictEqual(diagnostico.evidence.missing, ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']);
+  assert.deepStrictEqual(diagnostico.evidence.missing, ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27']);
   assert.match(diagnostico.evidence.errors.join('\n'), /critério duplicado: 1/i);
   assert.match(diagnostico.evidence.errors.join('\n'), /critérios obrigatórios ausentes: 2, 3, 4/i);
   assert.strictEqual(diagnostico.completion.status, 'pending');
   assert.deepStrictEqual(diagnostico.completion.criteria, [...diagnostico.evidence.missing, '1']);
 });
 
-test('docs/aceite registra os 21 critérios e mantém o smoke OpenCode pendente', () => {
+test('docs/aceite registra os 27 critérios e mantém o smoke OpenCode pendente', () => {
   const evidence = readEvidence(path.join(__dirname, '..', 'docs', 'aceite.md'));
 
-  assert.strictEqual(evidence.criteria.length, 21);
+  assert.strictEqual(evidence.criteria.length, 27);
   assert.deepStrictEqual(evidence.errors, []);
   const openCode = evidence.criteria.find((criterion) => criterion.criterion === '15');
   assert.strictEqual(openCode.type, 'pendente');

@@ -21,7 +21,7 @@ const PROXIMA_ACAO = {
   EXECUTE: 'seguir plan.md na ordem, verificando cada passo',
   REVIEW: 'revisar o diff contra spec.md e plan.md e gravar .stilo/review-NN.md',
   FIX: 'resolver cada achado do review mais recente e voltar para REVIEW',
-  DONE: 'projeto concluído — nada pendente',
+  DONE: 'oferecer auditoria opcional de simplificação ou seguir para encerramento',
 };
 
 const MODELO_ALVO = {
@@ -160,6 +160,7 @@ function modulosDaFase(state) {
   const modulos = [];
   if (resolveEnxuto(state) !== 'off') modulos.push('enxuto.md');
   if (fase(state) === 'REVIEW') modulos.push('revisor.md');
+  if (fase(state) === 'DONE') modulos.push('auditoria.md');
   return modulos;
 }
 

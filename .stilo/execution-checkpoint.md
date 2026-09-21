@@ -1,15 +1,15 @@
 # Caderno de bordo — Stilo Code
 
-Atualizado: 2026-09-21T11:12:55Z
+Atualizado: 2026-09-21T12:00:00Z
 
 ## Estado persistido
 
 - Projeto: `stilo-code`
 - Fase: `REVIEW`
-- Rodada: `9`
+- Rodada: `11`
 - Modo enxuto efetivo: `pleno` (state: `auto`)
 - Commits locais: `33ce81c feat: tornar pipeline do Stilo automático`, publicado em `origin/main`.
-- Working tree: limpa; `review-09` limpo.
+- Working tree: mudanças locais do ciclo de auditoria; `review-11` limpo.
 
 ## Concluído
 
@@ -30,6 +30,12 @@ Atualizado: 2026-09-21T11:12:55Z
 - `node scripts/sync-adapters.js --check`: passou.
 - `npm.cmd run validate-plan`: 8 tarefas, 6 ondas, passou.
 - `git diff --check`: passou.
+- Auditoria opcional de simplificação especificada em `spec.md` § 15 e implementada sem
+  comando, dependência ou remoção automática.
+- `modules/auditoria.md` carregado apenas em `DONE`; contrato textual coberto por
+  `tests/audit.test.js` e `tests/instructions.test.js`.
+- Critérios locais 22–27 registrados como atendidos em `docs/aceite.md`.
+- `review-10` corrigido e `review-11` registrado com 0 achados.
 
 ## Validação viva tentada
 
@@ -54,7 +60,13 @@ criação de projeto.
 - Plano: `docs/superpowers/plans/2026-09-18-automatico-sem-comandos-plan.md`.
 - Pendências vivas anteriores continuam pendentes até evidência em agente instalado.
 
+## Emenda — auditoria opcional de simplificação
+
+- Plano: `docs/superpowers/plans/2026-09-21-auditoria-opcional-simplificacao-plan.md`.
+- Design: `docs/superpowers/specs/2026-09-21-auditoria-opcional-simplificacao-design.md`.
+- Critérios 22–27 atendidos localmente; a auditoria não bloqueia `DONE`.
+
 ## Próxima ação
 
-`review-09` está limpo. Permanecer em `REVIEW` enquanto os critérios vivos continuarem
+`review-11` está limpo. Permanecer em `REVIEW` enquanto os critérios vivos continuarem
 pendentes; não reinstalar/publicar o plugin sem autorização.

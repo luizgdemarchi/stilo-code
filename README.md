@@ -159,13 +159,21 @@ sem aviso, sem pedir instalação.
 | Companion | Onde ajuda |
 |---|---|
 | `superpowers` | `BRAINSTORM`, `PLAN`, `EXECUTE` |
-| `ponytail` | `EXECUTE`, `FIX` — mantém o diff mínimo |
+| `ponytail` | `EXECUTE`, `FIX` — mantém o diff mínimo; `DONE` — auditoria opcional de simplificação |
 | `context7` (MCP) | `SPEC`, `PLAN` — docs atualizadas de biblioteca |
 | `playwright` (MCP) | `EXECUTE`, `REVIEW` — verificar em navegador de verdade |
 
 Só entram nessa lista pacotes que instalam em quase todo agente: servidor MCP, ou repo com
 adaptadores multi-agente. Ferramenta presa a um único agente cria um pipeline que quebra ao
 trocar de ferramenta — o problema que este pacote existe para resolver.
+
+### Auditoria opcional
+
+Depois de um `REVIEW/FIX` limpo, o agente pode oferecer uma auditoria consultiva de
+simplificação. Ela usa `ponytail-audit` quando já disponível ou as instruções internas
+quando não está. O resultado opcional é `.stilo/cleanup-NN.md`, com evidência, risco,
+remoção mínima e verificação por sugestão. A auditoria nunca apaga, move ou edita arquivos,
+nunca instala companion e não bloqueia `DONE`.
 
 ## Idioma
 

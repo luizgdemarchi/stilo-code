@@ -1,6 +1,6 @@
 # Stilo Code — Especificação
 
-> Status: aprovado para planejamento · Fase do pipeline: SPEC concluída
+> Status: implementado · Fase do pipeline: REVIEW (rodada 11 limpa; critérios vivos pendentes)
 
 ## 1. Problema
 
@@ -106,7 +106,7 @@ Pacotes que só trazem `.claude-plugin/` **não são citados em lugar nenhum do 
 | Companion | Como qualifica | Onde o pipeline aproveita |
 |---|---|---|
 | `superpowers` | adaptadores para Codex, Cursor, OpenCode, Devin, Hermes, Kimi, Pi, Gemini | `BRAINSTORM`, `PLAN`, `EXECUTE` |
-| `ponytail` | adaptadores para ~20 agentes | `EXECUTE`, `FIX` — mantém o diff mínimo |
+| `ponytail` | adaptadores para ~20 agentes | `EXECUTE`, `FIX` — mantém o diff mínimo; auditoria opcional no fim |
 | `context7` | MCP (HTTP) | `SPEC`, `PLAN` — docs atualizadas de biblioteca |
 | `playwright` | MCP (stdio) | `EXECUTE`, `REVIEW` — verificar em navegador de verdade |
 
@@ -409,3 +409,55 @@ comandos do Stilo, skills invocáveis ou configuração de tokens.
 Os critérios vivos antigos sobre comandos e override de `enxuto` deixam de ser
 aplicáveis; os critérios vivos de criação natural, `/clear`, transição de fase e idioma
 continuam pendentes até serem observados em uma sessão real.
+
+## 15. Emenda do ciclo de auditoria opcional de simplificação
+
+### Problema
+
+Depois de um `REVIEW` limpo, ainda pode haver código, arquivo, dependência ou
+configuração sem uso. O pipeline precisa oferecer uma última inspeção de simplificação
+sem transformar uma heurística em apagamento automático.
+
+### Objetivo
+
+Permitir uma auditoria final opcional, baseada no `ponytail-audit` quando disponível, que
+produza recomendações de remoção com evidência suficiente para decisão humana.
+
+### Não-objetivos
+
+- apagar, mover ou editar arquivos automaticamente;
+- bloquear `DONE` quando a auditoria não for executada ou quando houver sugestões abertas;
+- afirmar que uma remoção é segura apenas porque um símbolo não apareceu numa busca;
+- criar um analisador, dependência ou comando próprio do Stilo Code.
+
+### Requisitos
+
+1. Na transição para `DONE`, depois de um `REVIEW/FIX` limpo, o agente oferece a auditoria;
+   o usuário pode executá-la ou seguir sem relatório.
+2. O escopo padrão é o repositório inteiro, com atenção especial aos arquivos alterados
+   no ciclo atual.
+3. A auditoria usa `ponytail-audit` quando o companion está disponível e segue uma
+   instrução interna equivalente quando ele não está; a ausência do companion não gera
+   erro nem pedido de instalação.
+4. A saída é um relatório durável `.stilo/cleanup-NN.md`, sem sobrescrever relatórios
+   anteriores.
+5. Cada sugestão informa arquivo e linha (quando houver), evidência observada, risco,
+   remoção mínima proposta e verificação necessária.
+6. Sugestões são classificadas como `baixo risco`, `requer confirmação` ou `não
+   recomendado`; referências dinâmicas, API pública, manifestos, migrações, fixtures e
+   arquivos de histórico nunca são tratados como remoção automática.
+7. Uma sugestão aceita pelo usuário volta ao fluxo normal `FIX → REVIEW`; a auditoria não
+   edita código por conta própria.
+8. A auditoria não altera `state.json`, reviews, checkpoints, ciclos ou evidências
+   existentes, exceto pela criação do próprio relatório.
+
+### Critérios de aceite
+
+| # | Critério | Verificação |
+|---|---|---|
+| 22 | Auditoria é explicitamente opcional e não bloqueia `DONE` | instruções, teste textual e documentação |
+| 23 | Companion disponível é usado sem dependência obrigatória | teste com e sem `ponytail-audit` |
+| 24 | Relatório preserva histórico e contém evidência acionável | teste de formato e relatório de exemplo |
+| 25 | Nenhuma execução automática remove ou edita código | teste textual e revisão do fluxo |
+| 26 | Sugestão aceita retorna a `FIX → REVIEW` | instrução de transição e teste de contrato |
+| 27 | Casos de referências dinâmicas e artefatos protegidos são sinalizados | casos de teste/documentação |

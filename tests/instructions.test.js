@@ -93,6 +93,11 @@ test('modulosDaFase: REVIEW leva revisor; BRAINSTORM em auto não leva nada', ()
   assert.deepStrictEqual(modulosDaFase({ phase: 'BRAINSTORM', enxuto: 'auto' }), []);
 });
 
+test('modulosDaFase: DONE leva auditoria e não revisor', () => {
+  assert.deepStrictEqual(modulosDaFase({ phase: 'DONE', enxuto: 'auto' }), ['auditoria.md']);
+  assert.strictEqual(modulosDaFase({ phase: 'REVIEW', enxuto: 'auto' }).includes('auditoria.md'), false);
+});
+
 test('buildFullContext em EXECUTE inclui enxuto e não inclui frontend', () => {
   const ctx = buildFullContext({ project: 'x', phase: 'EXECUTE', enxuto: 'auto' });
 
@@ -108,6 +113,15 @@ test('buildFullContext em REVIEW inclui o revisor e a próxima rodada', () => {
 
   assert.match(ctx, /Módulo: Revisor/);
   assert.match(ctx, /review-03\.md/);
+});
+
+test('buildFullContext em DONE oferece auditoria sem permitir remoção automática', () => {
+  const ctx = buildFullContext({ project: 'x', phase: 'DONE', reviewRound: 2, enxuto: 'auto' });
+
+  assert.match(ctx, /Módulo: Auditoria opcional de simplificação/);
+  assert.match(ctx, /opcional/);
+  assert.match(ctx, /Não remova, mova nem edite arquivos/);
+  assert.match(ctx, /FIX.*REVIEW/);
 });
 
 test('buildFullContext sem estado ainda traz o ruleset e a instrução de projeto novo', () => {

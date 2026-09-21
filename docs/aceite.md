@@ -27,6 +27,12 @@ não é declarado `DONE`.
 | 19 | T03 | fallback byte a byte | local | `tests/context.test.js` | review-09 |
 | 20 | T02 | validação de estado legado | local | `tests/state.test.js` | review-09 |
 | 21 | T05 | `cycle.json`, checkpoint e review-09 | local | rastreabilidade registrada | review-09 |
+| 22 | T1 | instruções e teste textual | local | auditoria explicitamente opcional e sem bloqueio de `DONE` | `tests/audit.test.js`, review-10 |
+| 23 | T1/T2 | módulo com e sem `ponytail-audit` | local | companion opcional, fallback interno silencioso | `tests/audit.test.js`, review-10 |
+| 24 | T1/T2 | contrato de `.stilo/cleanup-NN.md` | local | histórico preservado e evidência acionável | `tests/audit.test.js`, review-10 |
+| 25 | T1/T2 | teste textual de segurança | local | nenhuma remoção ou edição automática | `tests/audit.test.js`, review-10 |
+| 26 | T1/T2 | contrato de transição | local | sugestão aceita retorna a `FIX` → `REVIEW` | `tests/audit.test.js`, review-10 |
+| 27 | T1/T2 | lista de áreas protegidas | local | referências dinâmicas e artefatos protegidos exigem confirmação | `tests/audit.test.js`, review-10 |
 
 ## Limitações
 
