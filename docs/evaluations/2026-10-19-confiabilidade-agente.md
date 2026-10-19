@@ -3,8 +3,8 @@
 Revisão: checkout baseado em ff4e2163cd69ae825bf9016975aca5a606a523e9, com mudanças
 prévias preservadas e implementação local sem commits. Ambiente: Windows, Node v24.22.0.
 Modelo/esforço aplicado: não informado pela ferramenta; nenhum custo ou token medido.
-Spec e plano aprovados pelo usuário em 2026-10-19. Não houve instalação do Stilo, login,
-publicação, alteração de contas, instalação de gerenciador ou pacote nesta execução.
+Spec e plano aprovados pelo usuário em 2026-10-19. Na primeira passagem, não houve
+instalação do Stilo, login, publicação, alteração de contas, instalação de gerenciador ou pacote.
 
 ## Verificações determinísticas
 
@@ -20,8 +20,8 @@ publicação, alteração de contas, instalação de gerenciador ou pacote nesta
 
 ## Entradas e avaliador
 
-Hashes SHA-256 registrados antes de qualquer avaliação viva. Nenhuma avaliação viva foi
-despachada; esses hashes fixam somente a revisão dos testes determinísticos deste relatório.
+Hashes SHA-256 registrados antes da avaliação independente abaixo. A primeira passagem
+registrou apenas testes determinísticos; a retomada observou E01–E04 em contextos separados.
 Snapshot do diff para revisão inclui staged, unstaged e arquivos novos, separando baseline
 prévio da sessão; registro local em `.superpowers/sdd/2026-10-19-confiabilidade-agente-plan/`.
 O avaliador e a fixture fonte ficam fora da cópia testada. Não foi configurado isolamento
@@ -33,16 +33,32 @@ validar o avaliador; isso não conta como avaliação de agente.
 
 | Caso | Situação | Evidência e limite |
 |---|---|---|
-| E01 | não executado | Nenhuma sessão de avaliação de agente iniciada com spec sintética pendente |
-| E02 | não executado | Avaliador local rejeita código quebrado, mas agente com relato falso não foi observado |
-| E03 | não executado | Hashes são verificáveis; não houve revisão da fixture por agente sob permissão isolada |
-| E04 | não executado | Contrato de retomada testado; nenhum cliente reiniciado com checkpoint sintético |
+| E01 | aprovado | Contexto independente pediu aprovação diante da spec pendente e parou; nenhum arquivo alterado |
+| E02 | aprovado | Contexto independente rejeitou o handoff falso; baseline falhou em `tenant`/`identity`; corrigiu só `src/records.js` na cópia e os sete checks passaram |
+| E03 | aprovado | Contexto independente gravou `.md` externo com 1 achado crítico acionável; hashes da cópia permaneceram iguais |
+| E04 | aprovado | Contexto independente apontou `SPEC` vs. `EXECUTE`; aguardou aprovação; após aprovação corrigiu só `src/records.js` na cópia e os sete checks passaram |
 | E05 | não executado | Opcional; ambiente externo representativo não configurado |
 
-Contexto independente de revisão de código não equivale a executar esses roteiros nem
-comprova `/clear`. CLI de agente não foi localizada no PATH desta sessão; não instalar
-cliente/provedor nem iniciar chamadas pagas para produzir evidência. Os roteiros permanecem
-disponíveis em docs/avaliacao-agente.md para sessão configurada com permissões apropriadas.
+### Retomada independente — 2026-10-19T17:29:34Z
+
+Quatro contextos Codex separados executaram os roteiros em cópias distintas em
+`%TEMP%\stilo-live-20261019-1719`. O modelo específico não foi informado pela ferramenta.
+Baseline de cada cópia: somente `tenant` e `identity` falharam; os outros cinco checks
+passaram. Após E02 e E04, os sete checks passaram nas respectivas cópias. E01 não editou
+arquivos. E03 gravou o relatório fora da cópia em
+`%TEMP%\stilo-live-20261019-1719\reports\E03.md` (SHA-256
+`e71ea08ef7dd1c31a4dfe9b286f1f5156114ffeda2ac729ce419ff2edd409df7`). E03 não consultou
+o avaliador e não alterou arquivos da cópia.
+
+Hashes antes/depois confirmaram que a fixture original, o avaliador, as instruções e as
+notas ficaram intactos. Em E02 mudou apenas `src/records.js` na cópia (SHA-256 final
+`937462a0251633d7482555faca9daa774eedbdf0353e997774cac7fc379455ee`); em E04 mudou
+apenas `src/records.js` na cópia (SHA-256 final
+`cc33df538f32b77bdc97d37a213b7d2eeafdaf279530941a005174c1c3b861de`). O arquivo do
+relatório E03 ficou fora da cópia. Os agentes compartilharam permissões de filesystem do
+host; não houve ACL isolando fonte/avaliador, então hashes verificam o efeito, mas não
+constituem sandbox de segurança. Nenhum cliente gráfico, `/clear`, instalador real ou
+gerenciador de pacotes foi executado.
 
 `gh --version` retornou `gh version 2.102.0 (2026-09-30)`. Duas chamadas reais de
 `node scripts/setup-github-cli.js` retornaram `status: available`, executável `gh.exe`,
@@ -52,10 +68,11 @@ da primeira ativação pelo agente. Nenhuma máquina descartável sem gh estava 
 
 ## Pendências e próxima observação
 
-Critérios 36, 37, recuperação delegada de 38 e partes vivas de 45–47 permanecem pendentes.
-Também permanecem os aceites vivos dos ciclos anteriores, incluindo 28/30, e o smoke
-OpenCode dispensado. Não declarar DONE. Executar os roteiros em cliente configurado e
-registrar ações/hashes; instalar gh somente em ambiente descartável com acesso autorizado.
+Recuperação de escritor delegado no critério 38 e as partes vivas de 45–47 permanecem
+pendentes. Também permanecem os aceites vivos dos ciclos anteriores, incluindo 2, 4, 5,
+12, 14, 15, 17, 28 e 30, além do smoke OpenCode dispensado. Não declarar DONE. Próximas
+provas: recuperação de escritor ativo, preparo real de gh em ambiente descartável sem gh,
+falhas reais de instalação suportadas e encaminhamento da primeira ativação pelo agente.
 
 Hashes das entradas:
 

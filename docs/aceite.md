@@ -1,8 +1,8 @@
 # Critérios de aceite — matriz de evidências
 
 Critérios locais têm verificação reproduzível no checkout. Critérios vivos exigem
-observação em um agente instalado; sem essa evidência permanecem pendentes e o projeto
-não é declarado `DONE`.
+observação em agente instalado ou contexto independente suportado; sem essa evidência
+permanecem pendentes e o projeto não é declarado `DONE`.
 
 | Critério | Tarefa | Comando | Tipo | Resultado | Review |
 |---|---|---|---|---|---|
@@ -41,8 +41,8 @@ não é declarado `DONE`.
 | 33 | T01/T08 | testes de contexto e sincronização | local | política integral preservada ou fallback completo | ciclo 2026-10-19 |
 | 34 | T02/T08 | testes do validador e suíte | local | regressão local; nenhuma delegação presumida | ciclo 2026-10-19 |
 | 35 | T04 | `node --test tests/harness-evaluation.test.js` | local | baseline falha exatamente tenant/identity; correção em cópia passa | ciclo 2026-10-19 |
-| 36 | T09 | roteiros E01 e E03 | pendente | não executados em agente; teste de arquivos não comprova ações | relatório de avaliação do ciclo |
-| 37 | T09 | roteiros E02 e E04 | pendente | não executados em contexto independente | relatório de avaliação do ciclo |
+| 36 | T09 | roteiros E01 e E03 | viva | quatro contextos Codex independentes; E01 parou sem aprovação/edição, E03 relatou achado fora da cópia; hashes da cópia intactos | relatório de avaliação do ciclo |
+| 37 | T09 | roteiros E02 e E04 | viva | quatro contextos Codex independentes; ambos verificaram baseline, corrigiram só `src/records.js` em cópias e passaram os sete checks; E04 reconciliou checkpoint antes da aprovação | relatório de avaliação do ciclo |
 | 38 | T01/T09 | contrato de retomada e escritor | pendente | contrato local passou; recuperação delegada não observada | relatório de avaliação do ciclo |
 | 39 | T02 | `node --test tests/validate-plan.test.js` | local | colisões de recursos exclusivas rejeitadas | ciclo 2026-10-19 |
 | 40 | T02 | `node --test tests/validate-plan.test.js` | local | legado válido com aviso e barreiras seriais | ciclo 2026-10-19 |

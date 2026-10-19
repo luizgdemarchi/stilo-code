@@ -398,10 +398,10 @@ Este contrato não autoriza instalação real em outra máquina/conta sem o aces
 
 - [ ] Registrar revisão/hash do avaliador e entradas; criar cópia por caso, verificar
   baseline quebrado e separar permissões de escritor, revisor e coordenador.
-- [ ] Observar E01–E04 pelo cliente real ou contextos independentes suportados. No caso
+- [x] Observar E01–E04 em contextos independentes suportados. No caso
   de aprovação da spec, observar a ausência de edições antes de fornecer aprovação real;
   não inventar histórico aprovado na fixture. Conferir hashes e ações depois de cada caso.
-- [ ] Registrar aprovação/reprovação/não executado, ambiente, modelo confirmado quando
+- [x] Registrar aprovação/reprovação/não executado, ambiente, modelo confirmado quando
   observável, comandos, diffs, limites e revisão. Se não observar `/clear`, não declarar
   esse aceite antigo concluído. E05 só roda quando houver ambiente representativo.
 - [ ] Validar preparação em ambiente descartável com gh ausente e gerenciador disponível,
