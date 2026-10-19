@@ -8,12 +8,12 @@ const { spawnSync } = require('node:child_process');
 const RAIZ = path.join(__dirname, '..');
 const SCRIPT = path.join(RAIZ, 'scripts', 'validate-plan.js');
 
-function tarefa(id, { especialista = 'Node.js', files = [`Modify: src/${id}.js`], dependsOn = 'nenhum' } = {}) {
+function tarefa(id, { especialista = 'Node.js', files = [`Modify: src/${id}.js`], dependsOn = 'nenhum', resources = 'nenhum' } = {}) {
   const blocoFiles = files === null
     ? ''
     : `\nFiles:\n${files.map((arquivo) => `- ${arquivo}`).join('\n')}`;
 
-  return `### ${id} — tarefa\n\nID: ${id}\nEspecialista: ${especialista}.${blocoFiles}\n- Depends-on: ${dependsOn}\n`;
+  return `### ${id} — tarefa\n\nID: ${id}\nEspecialista: ${especialista}.${blocoFiles}\n- Depends-on: ${dependsOn}\n${resources === null ? '' : `Resources: ${resources}\n`}`;
 }
 
 function plano(...tarefas) {
@@ -134,4 +134,42 @@ test('CLI retorna 0 para plano válido, 1 para erro de validação e 2 para uso 
   const ausente = spawnSync(process.execPath, [SCRIPT, path.join(dir, 'ausente.md')], { encoding: 'utf8' });
   assert.strictEqual(ausente.status, 2, ausente.stdout + ausente.stderr);
   assert.match(ausente.stderr, /Não foi possível ler/i);
+});
+
+const { validatePlan: validar, parsePlan: ler } = require(SCRIPT);
+test('recursos exclusivos rejeitam colisões e aceitam dependências ou recursos distintos', () => {
+  for (const [a, b] of [
+    ['db:app','db:app'], ['profile:web','profile:web'],
+    ['port:localhost:4173','port:127.0.0.1:4173'],
+    ['port:0.0.0.0:4173','port:192.168.0.2:4173'],
+    ['port:[::]:4173','port:localhost:4173'],
+    ['dir:./out','dir:OUT/cache'], ['dir:C:\\out','dir:c:/out/cache'],
+    ['dir:out/cache/..','dir:out'], ['dir:.','dir:src']
+  ]) {
+    const result = validar(plano(tarefa('A',{resources:a}),tarefa('B',{resources:b})));
+    assert.equal(result.valid, false, a+' / '+b);
+    assert.match(result.errors.join(' '), /recurso compartilhado/i);
+    assert.equal(validar(plano(tarefa('A',{resources:a}),tarefa('B',{resources:b,dependsOn:'A'}))).valid,true);
+  }
+  assert.equal(validar(plano(tarefa('A',{resources:'db:a'}),tarefa('B',{resources:'db:b'}))).valid,true);
+  assert.deepEqual(ler(plano(tarefa('A',{resources:'db:a, profile:b'}))).tasks[0].resources,['db:a','profile:b']);
+});
+test('recursos malformados não concedem independência', () => {
+  for (const resources of ['', 'other:a','db:*','nenhum, db:a','port:localhost:0','port:localhost:65536','dir:','db:a,,db:b']) {
+    assert.equal(validar(plano(tarefa('A',{resources}))).valid,false,resources);
+  }
+});
+test('legado é válido com aviso e barreira conservadora sem ocultar colisão antiga', () => {
+  const result=validar(plano(tarefa('A'),tarefa('B',{resources:null}),tarefa('C')));
+  assert.equal(result.valid,true); assert.equal(result.warnings.length,1);
+  assert.deepEqual(result.waves.map(w=>w.map(t=>t.id)),[['A'],['B'],['C']]);
+  assert.equal(validar(plano(tarefa('A',{resources:null,files:['Modify: x.js']}),tarefa('B',{files:['Modify: x.js']}))).valid,false);
+  const future=validar(plano(tarefa('A',{resources:null,dependsOn:'B'}),tarefa('B')));
+  assert.equal(future.valid,false); assert.match(future.errors.join(' '),/legado|ambiguidade/i);
+});
+
+test('plano misto aceita recurso repetido em ondas efetivamente seriais por barreira legada', () => {
+  const result=validar(plano(tarefa('A',{resources:'db:teste'}),tarefa('L',{resources:null}),tarefa('B',{resources:'db:teste'})));
+  assert.equal(result.valid,true,result.errors.join('\n'));
+  assert.deepEqual(result.waves.map(w=>w.map(t=>t.id)),[['A'],['L'],['B']]);
 });

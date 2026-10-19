@@ -159,6 +159,7 @@ function diagnosticoEstado(state, caminhos) {
 function modulosDaFase(state) {
   const modulos = [];
   if (resolveEnxuto(state) !== 'off') modulos.push('enxuto.md');
+  if (['PLAN', 'EXECUTE', 'REVIEW'].includes(fase(state))) modulos.push('orquestracao.md');
   if (fase(state) === 'REVIEW') modulos.push('revisor.md');
   if (fase(state) === 'DONE') modulos.push('auditoria.md');
   return modulos;
@@ -295,6 +296,7 @@ function blocoEstado(state, caminhos) {
 // módulos que a fase pede.
 function buildFullContext(state, caminhos) {
   const partes = [lerArquivo('AGENTS.md'), blocoEstado(state, caminhos)];
+  if (caminhos && caminhos.setupNote) partes.push(caminhos.setupNote);
   const podeAgir = !diagnosticoEstado(state, caminhos) && !(caminhos && caminhos.length > 1);
   for (const modulo of podeAgir ? modulosDaFase(state) : []) {
     const texto = lerArquivo('modules', modulo);
@@ -322,6 +324,9 @@ function buildInjectedContext(state, caminhos) {
     protected: [
       'Regra 0',
       'Regra 1',
+      '## Retomada verificável',
+      '## Preparação do ambiente',
+      ...(caminhos && caminhos.setupNote ? [caminhos.setupNote] : []),
       '## Estado do Stilo Code',
       'Travas de segurança',
       'Negações',

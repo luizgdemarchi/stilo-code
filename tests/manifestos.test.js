@@ -91,7 +91,7 @@ test('nenhum comando ou skill público do Stilo é publicado', () => {
 test('nenhum arquivo publicado cita pacote preso a um único agente', () => {
   // Critério de aceite 10 do spec: § 4.1 proíbe citar o que não é portátil.
   const proibidos = ['code-review', 'frontend-design', 'skill-creator'];
-  const ignorar = new Set(['.git', 'node_modules', 'tests', 'spec.md', 'plan.md']);
+  const ignorar = new Set(['.git', '.superpowers', 'node_modules', 'tests', 'spec.md', 'plan.md']);
 
   function varre(dir, rel) {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -105,7 +105,8 @@ test('nenhum arquivo publicado cita pacote preso a um único agente', () => {
       if (!/\.(md|json|js|mjs|toml|mdc)$/.test(e.name)) continue;
       const texto = fs.readFileSync(full, 'utf8').toLowerCase();
       for (const p of proibidos) {
-        assert.strictEqual(texto.includes(p), false, `${r} cita "${p}"`);
+        const pacote = new RegExp(`(?<![a-z0-9_-])${p}(?![a-z0-9_-])`, 'i');
+        assert.strictEqual(pacote.test(texto), false, `${r} cita "${p}"`);
       }
     }
   }

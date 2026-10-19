@@ -3,17 +3,18 @@
 **Gatilho: carregue este módulo na fase `REVIEW`.** Em qualquer outra fase, ignore este
 arquivo.
 
-Revisar é procurar o que está errado, não confirmar o que está certo. Um review que não
-produz achado nenhum na primeira rodada de um projeto real quase sempre significa que a
-revisão foi rasa — não que o código está perfeito.
+Revisar procura falhas verificáveis. Zero achados é resultado válido; não invente problemas.
+Revisores não escrevem no código. Registre o alvo por commits ou snapshot explícito de
+staged, unstaged e arquivos novos relevantes, com hashes, cobertura e exclusões. Distingua
+introduzido, preexistente e indeterminado. Reviews antigos não exigem migração.
 
 ## O que revisar, nesta ordem
 
 A ordem importa: um bug de corretude em código que nem deveria existir é tempo perdido.
 
 1. **O diff cumpre o `spec.md`?** Cada critério de aceite do spec: atendido, parcialmente
-   atendido ou ausente. Um critério ausente é achado `crítico`, mesmo que todo o código
-   escrito esteja correto.
+   atendido ou ausente. Registre impacto e pendências obrigatórias separadamente;
+   ausência de observação não comprova bug.
 2. **O diff cumpre o `plan.md`?** Todo passo do plano foi feito? Foi feito algo que o
    plano não pedia? Escopo a mais é achado — código não pedido também é mantido depois.
 3. **Corretude.** A lógica faz o que o nome dela promete. Leia o código como se você não
@@ -53,6 +54,11 @@ Um achado é acionável ou não é achado. Todo campo abaixo é obrigatório.
 - **Gravidade:** crítico | alto | médio | baixo
 - **O que quebra:** entrada ou situação concreta → resultado errado observável.
 - **Como corrigir:** a mudança mínima que resolve.
+- **Evidência:** reprodução, comando e resultado, ou leitura verificável; declarar prova não executada.
+- **Confiança:** alta | média | baixa
+- **Contraprova verificada:** chamadores e controles compartilhados que podem refutar a alegação; resultado observado.
+- **Classificação:** confirmado | hipótese | sugestão
+- **Origem:** introduzido | preexistente | indeterminado
 - **Estado:** aberto
 ```
 
@@ -65,9 +71,13 @@ Um achado é acionável ou não é achado. Todo campo abaixo é obrigatório.
 | `médio` | Bug em caso de borda improvável, ou falta de teste em lógica não trivial |
 | `baixo` | Clareza, nome, duplicação, comentário desatualizado |
 
-**"O que quebra" é o campo que separa review de opinião.** Se você não consegue escrever a
-entrada concreta que produz o resultado errado, o achado é uma suspeita — rebaixe para
-`baixo` e diga que é suspeita, ou corte.
+Gravidade mede impacto; confiança mede sustentação. Hipótese não conta como bug confirmado.
+Procure autorização nos chamadores e controles compartilhados antes de concluir que falta
+validação. Não invente reprodução ou teste executado; declare prova não executada.
+
+Exemplos: acesso entre tenants reproduzido é confirmado, confiança alta; caminho sem
+reprodução é hipótese pendente; autorização no chamador que nega acesso refuta a suspeita.
+Registre a contraprova e descarte a alegação com motivo, sem inventar bug.
 
 Não invente achado para encher a lista. Rodada sem achado `crítico` nem `alto` é resultado
 válido e é o que fecha o projeto.
@@ -81,7 +91,8 @@ sequência é o histórico do que já foi encontrado.
 ```markdown
 # Review NN — <projeto>
 
-Revisado: <o que entrou no diff, em uma linha>
+Revisado: <commits ou snapshot staged/unstaged/novos com hashes>
+Cobertura e exclusões: <arquivos, cenários e limitações>
 Contra: `spec.md`, `plan.md`
 
 ## Resumo
@@ -108,7 +119,7 @@ aparecer na rodada seguinte.
 
 Só quando a rodada de `REVIEW` mais recente **não** produzir nenhum achado `crítico` nem
 `alto`, e todos os achados das rodadas anteriores estiverem `corrigido` ou `descartado`
-com motivo.
+com motivo. Evidências obrigatórias pendentes também impedem DONE.
 
 Achados `médio` e `baixo` em aberto não impedem `DONE`, mas ficam listados no último
 review — é o que o projeto sabe sobre si mesmo.

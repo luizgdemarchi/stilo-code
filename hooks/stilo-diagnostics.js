@@ -6,7 +6,7 @@ const path = require('path');
 
 const { resolveProjeto } = require('./stilo-state.js');
 
-const REQUIRED_EVIDENCE_CRITERIA = Array.from({ length: 27 }, (_, index) => String(index + 1));
+const REQUIRED_EVIDENCE_CRITERIA = Array.from({ length: 48 }, (_, index) => String(index + 1));
 
 function fileCheck(name, filePath) {
   try {

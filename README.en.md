@@ -21,6 +21,21 @@ the disk and picks up exactly where it left off.
 
 ## The pipeline
 
+On the first supported activation, the agent prepares GitHub CLI (`gh`) outside hooks.
+It reuses an existing version or uses WinGet, an existing Homebrew, or apt/dnf with an
+already configured package repository and allowed privileges. It validates the executable;
+Windows may require a new window to refresh PATH. Authentication remains a separate step.
+Plugin installation is distinct from activation; npm install scripts are not assumed.
+Copying `AGENTS.md` directs the agent to prepare gh with its tools; the file alone cannot
+install it. Unavailable network, manager or privileges remain pending without blocking the
+pipeline or automatic retries. [Methods and limits (Portuguese)](docs/preparacao-github-cli.md).
+
+Resumption compares state, checkpoint and checkout before edits. Tasks declare exclusive
+resources; reviews record evidence, confidence and counterevidence. Agent evaluations use
+disposable copies and distinguish local tests from live observation. A fresh subagent does
+not prove `/clear`. Model/effort selection considers risk, explicit preferences and exposed
+capabilities, and never claims an unconfirmed model switch.
+
 ```
 BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
 ```

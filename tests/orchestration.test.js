@@ -38,3 +38,39 @@ test('cada adaptador sincronizado contém o contrato de tarefa', () => {
     assert.match(texto, /Depends-on:/, `${destino}: sem Depends-on:`);
   }
 });
+
+test('seleção registra pedido, confirmação e resultado separadamente', () => {
+  const texto = le('modules/orquestracao.md');
+  for (const campo of [
+    'Classificação:',
+    'Modelo solicitado:',
+    'Esforço solicitado:',
+    'Justificativa:',
+    'Aplicação confirmada:',
+    'Validação:',
+    'Escalada:'
+  ]) {
+    assert.ok(texto.includes(campo), campo);
+  }
+  assert.match(texto, /escolhas explícitas do usuário prevalecem/i);
+  assert.match(texto, /não informada pela ferramenta/i);
+});
+
+test('seleção pondera risco e tem fallback honesto', () => {
+  const texto = le('modules/orquestracao.md');
+  assert.match(texto, /edição mecânica/i);
+  assert.match(texto, /lógica comum/i);
+  assert.match(texto, /arquitetura.*segurança.*incerteza/is);
+  assert.match(texto, /permissões.*não.*simples/is);
+  assert.match(texto, /sem subagentes.*série/is);
+  assert.match(texto, /sem controle de modelo/i);
+  assert.match(texto, /sem controle de esforço/i);
+});
+
+test('escalada distingue falha de capacidade de falha de ambiente', () => {
+  const texto = le('modules/orquestracao.md');
+  assert.match(texto, /diagnosticar.*antes.*escalar/is);
+  assert.match(texto, /falha de capacidade.*escalar.*uma vez/is);
+  assert.match(texto, /falha de ambiente não provoca escalada/i);
+  assert.match(texto, /escalada.*sem sucesso.*coordenador reassume/is);
+});

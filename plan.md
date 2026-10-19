@@ -1,4 +1,19 @@
+<!-- Aprovação: usuário confirmou spec e plano em 2026-10-19. Status históricos abaixo não revogam esta aprovação. Execução serial sem commits/publicação. -->
+
 # Stilo Code — Plano de Implementação
+
+> **Proposta atual (2026-10-19):** confiabilidade do agente e preparação do GitHub CLI.
+> Plano aprovado em `docs/superpowers/plans/2026-10-19-confiabilidade-agente-plan.md`;
+> spec em `docs/superpowers/specs/2026-10-19-confiabilidade-agente-design.md` e `spec.md` § 17.
+> Spec e plano aprovados explicitamente em 2026-10-19; implementação local verificada,
+> com evidências vivas pendentes no relatório do ciclo.
+> A emenda anterior está preservada; sua integração pendente é tratada como pré-requisito
+> em T01 da proposta, sem declarar os aceites anteriores concluídos.
+
+> **Emenda ativa (2026-10-01):** seleção automática de modelo e esforço por tarefa,
+> conforme `spec.md` § 16. Seguir
+> `docs/superpowers/plans/2026-10-01-selecao-modelo-esforco-plan.md`.
+> As instruções e planos anteriores abaixo são históricos e não substituem este ciclo.
 
 > Fase do pipeline: PLAN · Baseado em `spec.md`
 > Execução em **Sonnet 5 @ medium** (fase `EXECUTE`); voltar a Opus/xhigh no `REVIEW`.

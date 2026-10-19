@@ -1,6 +1,11 @@
+<!-- Aprovação: usuário confirmou spec e plano em 2026-10-19. Status históricos abaixo não revogam esta aprovação. Execução serial sem commits/publicação. -->
+
 # Stilo Code — Especificação
 
-> Status: implementado · Fase do pipeline: REVIEW (rodada 11 limpa; critérios vivos pendentes)
+> Ciclo atual (2026-10-19): confiabilidade do agente e preparação do GitHub CLI,
+> detalhada no § 17. Spec e plano aprovados; implementação local verificada, aceites vivos pendentes.
+> Status anterior: emenda aprovada; T01 implementada, retorno a PLAN para corrigir a integração de T02.
+> Histórico: rodada 11 limpa; critérios vivos anteriores continuam pendentes.
 
 ## 1. Problema
 
@@ -461,3 +466,81 @@ produza recomendações de remoção com evidência suficiente para decisão hum
 | 25 | Nenhuma execução automática remove ou edita código | teste textual e revisão do fluxo |
 | 26 | Sugestão aceita retorna a `FIX → REVIEW` | instrução de transição e teste de contrato |
 | 27 | Casos de referências dinâmicas e artefatos protegidos são sinalizados | casos de teste/documentação |
+
+## 16. Seleção automática de modelo e esforço por tarefa
+
+### Problema e objetivo
+
+A orquestração distribui tarefas, mas não define como escolher modelo e esforço para
+cada subagente. O coordenador deve fazer essa escolha automaticamente, reservando
+capacidade maior para tarefas que precisam dela e usando modelos leves em trabalho
+simples. O usuário não precisa escolher um modelo a cada delegação.
+
+### Requisitos
+
+1. Antes de delegar, avaliar complexidade, risco, ambiguidade, contexto necessário e
+   possibilidade de verificar o resultado. A fase é um sinal, não o único critério.
+2. Escolher o modelo menos exigente adequado entre os disponíveis na ferramenta atual,
+   com esforço baixo para tarefas simples, médio para lógica relevante e alto para
+   arquitetura, segurança, revisão crítica ou incerteza elevada. Modelo e esforço são
+   escolhas separadas; usar somente combinações suportadas.
+3. Uma tarefa pequena envolvendo autenticação, permissões, dados ou mudanças destrutivas
+   não é classificada como simples apenas pelo número de arquivos ou linhas.
+4. Registrar por tarefa a classificação, modelo e esforço solicitados e uma justificativa
+   curta. Não afirmar que a seleção foi aplicada quando a ferramenta não a confirma.
+5. Respeitar escolhas explícitas do usuário. Na ausência delas, não perguntar qual modelo
+   usar a cada tarefa e não fixar nomes de modelos universais para todos os agentes.
+6. Se a validação falhar, diagnosticar a causa antes de repetir. Quando houver limitação
+   de capacidade, elevar modelo ou esforço e transmitir a evidência da falha. Falhas de
+   ambiente não provocam escalada de modelo por si só. Após uma escalada sem sucesso,
+   o coordenador reassume e registra o impedimento, sem repetição automática ilimitada.
+7. Se não houver subagentes, executar em série. Se não houver seleção de modelo ou
+   esforço, usar o recurso disponível e registrar a limitação sem fingir troca, exigir
+   instalação ou bloquear o trabalho por esse motivo.
+8. A seleção não altera as regras de ondas, dependências, separação de arquivos,
+   verificação, commits pelo coordenador e revisão. Não cria subagentes quando o custo
+   de delegação não se justifica por uma tarefa concreta e delimitada.
+9. A política deve chegar aos adaptadores e ao contexto automático relevante, inclusive
+   quando compactado, preservando as regras existentes e seu fallback.
+
+### Não-objetivos e fora de escopo
+
+- Criar um roteador externo, contratar provedores ou adicionar dependências de runtime.
+- Trocar automaticamente o modelo da sessão principal.
+- Garantir redução de custo ou latência sem medição real.
+- Resolver ou apagar pendências de validação viva dos ciclos anteriores.
+
+### Critérios de aceite
+
+| # | Critério | Verificação |
+|---|---|---|
+| 28 | Seleção automática considera a tarefa e usa modelo e esforço disponíveis | cenários de classificação: edição mecânica, lógica comum, arquitetura e segurança |
+| 29 | Risco prevalece sobre tamanho e instrução explícita prevalece sobre seleção automática | cenários de alteração curta em permissões e modelo imposto pelo usuário |
+| 30 | Seleção e justificativa são rastreáveis sem alegar aplicação não confirmada | validar exemplos de contrato de tarefa e relatório de execução |
+| 31 | Escalada tem diagnóstico e limite; erro de ambiente não muda modelo por si só | cenários de falha de capacidade, falha repetida e indisponibilidade de ambiente |
+| 32 | Ausência de controle ou subagentes tem fallback honesto | cenários sem subagentes, sem escolha de modelo e sem escolha de esforço |
+| 33 | Política é preservada nos adaptadores e na compactação aplicável | testes de instruções/contexto e verificação de sincronização dos adaptadores |
+| 34 | Orquestração existente permanece válida | testes de plano/ondas e regressão da suíte existente |
+
+Testes textuais e cenários documentados verificam o contrato, não comprovam a escolha
+real de um modelo. A aplicação efetiva precisa de evidência de uma delegação em ambiente
+que exponha essa capacidade; até lá, esse aceite vivo permanece explicitamente pendente.
+
+## 17. Proposta — confiabilidade do agente e preparação do GitHub CLI
+
+Status: spec e plano aprovados explicitamente pelo usuário em 2026-10-19.
+Implementação local verificada; encerramento depende das evidências vivas registradas.
+
+Documento normativo desta proposta:
+`docs/superpowers/specs/2026-10-19-confiabilidade-agente-design.md`.
+Ele contém problema, objetivo, não-objetivos, requisitos R1–R8, critérios verificáveis
+35–48 e fora de escopo. As seções anteriores e suas pendências permanecem preservadas.
+
+Escopo: avaliação do comportamento do agente; retomada contra o estado real; recursos
+compartilhados nas ondas; evidência e contraprova no review; comparação limitada de
+instruções; preparação idempotente do GitHub CLI (`gh`) na instalação/primeira ativação
+suportada, com autenticação separada.
+
+Plano aprovado:
+`docs/superpowers/plans/2026-10-19-confiabilidade-agente-plan.md`.
+Revisões e relatório de avaliação registram a execução e suas pendências.

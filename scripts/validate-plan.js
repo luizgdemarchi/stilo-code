@@ -48,6 +48,30 @@ function parseDependencies(value) {
   return value.split(',').map((dependency) => dependency.trim()).filter(Boolean);
 }
 
+function resourceKey(resource) {
+  const match = resource.match(/^(port|db|dir|profile):(.+)$/i);
+  if (!match || /[*?\[\]{}<>]/.test(resource.replace(/\[(?:::|::1)\]/g, 'ipv6'))) return null;
+  const [, rawType, value] = match;
+  const type = rawType.toLowerCase();
+  if (type === 'dir') return { type, value: path.posix.normalize(value.replace(/\\/g, '/')).replace(/\/$/, '').toLowerCase() || '/' };
+  if (type !== 'port') return { type, value: value.toLowerCase() };
+  const port = value.match(/^(\[[^\]]+\]|[^:\s]+):(\d+)$/);
+  if (!port || Number(port[2]) < 1 || Number(port[2]) > 65535) return null;
+  let host = port[1].toLowerCase();
+  if (['localhost', '127.0.0.1', '[::1]'].includes(host)) host = 'loopback';
+  return { type, host, port: Number(port[2]), wildcard: ['0.0.0.0', '[::]'].includes(host) };
+}
+
+function resourceConflict(a, b) {
+  const x = resourceKey(a), y = resourceKey(b);
+  if (!x || !y || x.type !== y.type) return false;
+  if (x.type === 'port') return x.port === y.port && (x.host === y.host || x.wildcard || y.wildcard);
+  if (x.type !== 'dir') return x.value === y.value;
+  const contains = (parent, child) => parent === child || child.startsWith(parent.endsWith('/') ? parent : parent + '/')
+    || (parent === '.' && !path.posix.isAbsolute(child) && !/^[a-z]:/.test(child) && child !== '..' && !child.startsWith('../'));
+  return contains(x.value, y.value) || contains(y.value, x.value);
+}
+
 function parsePlan(text) {
   const lines = String(text).replace(/\r\n/g, '\n').split('\n');
   const errors = [];
@@ -61,6 +85,17 @@ function parsePlan(text) {
     const filesEntry = block.findIndex((line) => /^\s*Files\s*:\s*$/i.test(line));
     const dependencyEntry = block.findIndex((line) => /^\s*-?\s*Depends-on\s*:/i.test(line));
     const headingId = (lines[start].match(/^###\s+(?:Tarefa\s+|Task\s+)?([A-Za-z][A-Za-z0-9_-]*)\b/i) || [])[1];
+    const resourceEntries = block.map((line, i) => /^\s*Resources\s*:/i.test(line) ? i : -1).filter(i => i >= 0);
+    const resourcesDeclared = resourceEntries.length > 0;
+    let resources = [];
+    if (resourceEntries.length > 1) errors.push(lineError(headingLine, headingId, 'Resources duplicado'));
+    if (resourcesDeclared) {
+      const raw = block[resourceEntries[0]].replace(/^\s*Resources\s*:\s*/i, '').trim();
+      if (!/^nenhum$/i.test(raw)) {
+        resources = raw.split(',').map(value => value.trim());
+        if (resources.some(value => !resourceKey(value))) errors.push(lineError(headingLine, headingId, 'recurso inválido em Resources'));
+      }
+    }
 
     let id = '';
     if (idEntry >= 0) id = block[idEntry].replace(/^\s*ID\s*:\s*/i, '').trim();
@@ -107,6 +142,8 @@ function parsePlan(text) {
       specialist,
       files,
       dependsOn,
+      resources,
+      resourcesDeclared,
       uncertain: files.some((file) => isUncertainPath(file.path)),
       line: headingLine,
     });
@@ -181,6 +218,8 @@ function formWaves(tasks, tasksById) {
 function validatePlan(text) {
   const parsed = parsePlan(text);
   const errors = [...parsed.errors];
+  const warnings = parsed.tasks.filter(task => !task.resourcesDeclared)
+    .map(task => `${task.id}: plano legado sem Resources; execução conservadora em série.`);
   const tasksById = new Map();
 
   for (const task of parsed.tasks) {
@@ -219,9 +258,12 @@ function validatePlan(text) {
   const graphIsUsable = !cycle
     && [...tasksById.values()].every((task) => task.dependsOn.every((dependency) => tasksById.has(dependency)))
     && tasksById.size === parsed.tasks.length;
-  const waves = graphIsUsable ? formWaves([...tasksById.values()], tasksById) : [];
+  const candidateWaves = graphIsUsable ? formWaves([...tasksById.values()], tasksById) : [];
 
-  waves.forEach((wave, index) => {
+  // A barreira legada não pode esconder colisões já rejeitadas pelo contrato antigo.
+  let waves = candidateWaves;
+
+  candidateWaves.forEach((wave, index) => {
     const owners = new Map();
     for (const task of wave) {
       for (const file of task.files) {
@@ -236,7 +278,28 @@ function validatePlan(text) {
     }
   });
 
-  return { valid: errors.length === 0, errors, waves };
+  if (graphIsUsable && warnings.length) {
+    const serial = [...tasksById.values()].map(task => ({ ...task, dependsOn: [...task.dependsOn] }));
+    for (let index = 0; index < serial.length; index++) {
+      if (serial[index].resourcesDeclared) continue;
+      serial[index].dependsOn.push(...serial.slice(0, index).map(task => task.id));
+      for (const later of serial.slice(index + 1)) later.dependsOn.push(serial[index].id);
+    }
+    const serialById = new Map(serial.map(task => [task.id, task]));
+    if (findCycle(serialById)) {
+      errors.push('Plano legado: ambiguidade entre a ordem conservadora e dependência futura. Declare Resources e revise a ordem.');
+      waves = [];
+    } else waves = formWaves(serial, serialById);
+  }
+
+  waves.forEach((wave, index) => {
+    for (let i = 0; i < wave.length; i++) for (let j = i + 1; j < wave.length; j++) {
+      for (const a of wave[i].resources) for (const b of wave[j].resources) {
+        if (resourceConflict(a, b)) errors.push(`Onda ${index + 1}: recurso compartilhado ${a} / ${b} entre ${wave[i].id} e ${wave[j].id}.`);
+      }
+    }
+  });
+  return { valid: errors.length === 0, errors, waves, warnings };
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -255,6 +318,7 @@ function main(argv = process.argv.slice(2)) {
   }
 
   const result = validatePlan(text);
+  for (const warning of result.warnings) console.error(`Aviso: ${warning}`);
   if (!result.valid) {
     console.error(`Plano inválido: ${result.errors.length} erro(s).`);
     for (const error of result.errors) console.error(`- ${error}`);

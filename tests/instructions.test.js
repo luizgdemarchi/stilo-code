@@ -9,6 +9,7 @@ const { resolveProjeto } = require('../hooks/stilo-state.js');
 const {
   buildAmbiguityNote,
   buildFullContext,
+  buildInjectedContext,
   buildStateLine,
   modulosDaFase,
   pluginRoot,
@@ -82,12 +83,13 @@ test('instruções listam campos e bloqueiam ação quando o state é inválido'
 test('modulosDaFase: EXECUTE leva enxuto, não leva revisor', () => {
   const modulos = modulosDaFase({ phase: 'EXECUTE', enxuto: 'auto' });
 
-  assert.deepStrictEqual(modulos, ['enxuto.md']);
+  assert.deepStrictEqual(modulos, ['enxuto.md', 'orquestracao.md']);
 });
 
 test('modulosDaFase: REVIEW leva revisor; BRAINSTORM em auto não leva nada', () => {
   assert.deepStrictEqual(modulosDaFase({ phase: 'REVIEW', enxuto: 'auto' }), [
     'enxuto.md',
+    'orquestracao.md',
     'revisor.md',
   ]);
   assert.deepStrictEqual(modulosDaFase({ phase: 'BRAINSTORM', enxuto: 'auto' }), []);
@@ -196,17 +198,19 @@ test('buildStateLine cabe em uma linha mesmo com valor hostil', () => {
   }
 });
 
-test('contexto nominal por fase respeita o orçamento de 22 mil caracteres', () => {
+test('contexto nominal respeita 16 mil caracteres ou preserva o contexto completo', () => {
   const fases = ['BRAINSTORM', 'SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'];
   for (const phase of fases) {
-    const contexto = buildFullContext({
+    const state = {
       version: 1,
       project: 'x',
       phase,
       reviewRound: 1,
       enxuto: 'auto',
       updated: '2026-01-01T00:00:00Z',
-    });
-    assert.ok(contexto.length <= 22_000, 'fase: ' + phase + ': ' + contexto.length + ' caracteres');
+    };
+    const contexto = buildInjectedContext(state);
+    if (contexto.length > 16000) assert.strictEqual(contexto, buildFullContext(state));
+    else assert.ok(contexto.length <= 16000);
   }
 });

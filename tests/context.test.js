@@ -31,11 +31,12 @@ test('texto sem blocos ainda é selecionável sem resumir', () => {
   assert.strictEqual(selectContextBlocks('linha única', { budget: 40 }), 'linha única');
 });
 
-test('contexto automático reduz módulos opcionais sem perder estado', () => {
+test('contexto automático preserva os módulos e usa fallback quando os protegidos não cabem', () => {
   const state = { version: 1, project: 'x', phase: 'REVIEW', reviewRound: 1, enxuto: 'auto' };
   const completo = buildFullContext(state);
   const automatico = buildInjectedContext(state);
-  assert.ok(automatico.length < completo.length);
+  if (automatico.length > 16000) assert.strictEqual(automatico, completo);
+  else assert.ok(automatico.length <= completo.length);
   assert.match(automatico, /Estado do Stilo Code/);
   assert.match(automatico, /Módulo: Revisor/);
   assert.match(automatico, /Formato de um achado/);

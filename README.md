@@ -52,6 +52,21 @@ O estado fica em `<projeto>/.stilo/state.json`:
 
 ## Instalação
 
+Na primeira ativação suportada, o agente prepara o GitHub CLI (`gh`) fora dos hooks.
+Reutiliza uma versão existente; quando ausente, usa WinGet, Homebrew já instalado ou
+apt/dnf com pacote disponível e permissões permitidas. A instalação é confirmada por
+versão; no Windows, o PATH pode exigir nova janela. Login é uma etapa separada.
+O cliente não precisa executar scripts npm durante `/plugin install`. Copiar `AGENTS.md`
+inclui o preparo pelas ferramentas do agente; copiar o arquivo sozinho não instala gh.
+Falta de rede, gerenciador ou privilégio fica registrada sem bloquear o pipeline nem
+repetir automaticamente a tentativa. [Métodos, limites e retomada](docs/preparacao-github-cli.md).
+
+Na retomada, o agente compara estado, checkpoint e checkout antes de editar. Tarefas
+declaram também recursos exclusivos; reviews registram evidência, confiança e contraprova.
+[Avaliações reproduzíveis](docs/avaliacao-agente.md) distinguem testes locais de observação
+real; um subagente novo não comprova `/clear`. A política de modelo/esforço considera risco,
+preferências explícitas e capacidade disponível, sem alegar troca não confirmada.
+
 ### Claude Code
 
 ```
