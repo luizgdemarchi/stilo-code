@@ -57,9 +57,18 @@ permanecem pendentes e o projeto não é declarado `DONE`.
 
 ## Limitações
 
-Os critérios 2, 4, 5, 12, 14 e 17 exigem uma conversa real e continuam pendentes. O
-critério 15 permanece dispensado; o fallback suportado é copiar `AGENTS.md` para o
-projeto. Nenhuma instalação ou publicação foi feita neste ciclo.
+Os critérios 2, 4, 5, 12, 14 e 17 exigem conversas independentes em cliente suportado;
+esta sessão não comprova novos projetos, `/clear` ou transições vivas. O critério 15
+permanece dispensado. Os critérios 28 e 30 dependem de seleção/aplicação de modelo
+confirmáveis pela ferramenta; isso não foi exposto nesta sessão. O critério 38 exige
+recuperação de escritor delegado ainda ativo; não havia escritor ativo para recuperar.
+
+Verificação do host em 2026-10-19: `gh.exe` está presente (2.102.0), e `winget`,
+Windows Sandbox, Docker, Podman e clientes Claude/Codex/OpenCode/Qoder não estão
+disponíveis. `wsl --list --quiet` informou que o Subsistema do Windows para Linux não
+está instalado. Assim, não há alvo descartável suportado para instalar `gh` ausente,
+nem cliente instalado para observar primeira ativação. Não foi instalado gerenciador,
+distribuição ou pacote; critérios 45–47 permanecem pendentes.
 
 ## Evidência histórica preservada
 

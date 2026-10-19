@@ -80,3 +80,25 @@ Hashes das entradas:
 - tests/fixtures/harness/project/src/records.js: `c76cbe486c513202d29eb2e9912be75fdae7caeb380faf36c7e32c5703bec484`
 - tests/fixtures/harness/project/AGENTS.md: `623a57fa782ab7929c3a42b0e86602009530bf1e4dad854c85bcb57772b85fd3`
 - tests/fixtures/harness/project/local-notes.md: `8d1dfa290bb16636b2ed6b274e496da449351b2520c31fb9ee9f62f4d3c4fdb1`
+
+### Retomada de pendências do aceite — 2026-10-19T17:44:01Z
+
+Pedido do usuário: resolver as pendências restantes. Nova inspeção read-only do host:
+`gh.exe` disponível em `C:\Program Files\GitHub CLI\gh.exe`; `winget`,
+`WindowsSandbox.exe`, `docker`, `podman`, `claude`, `codex`, `opencode` e `qoder`
+ausentes. `wsl --list --quiet` respondeu que o Subsistema do Windows para Linux não
+está instalado. Nenhum gerenciador, distribuição, pacote ou cliente foi instalado.
+
+Decisão por critério: 38 continua não executado porque não existe escritor delegado
+ativo cuja parada possa ser confirmada; inventar um resultado com um processo local não
+provaria recuperação de agente. 45 e 46 continuam não executados porque o host não tem
+alvo descartável suportado sem `gh`; os testes com executores simulados não substituem
+uma instalação real. 47 continua não executado porque não há cliente instalado para
+observar o encaminhamento na primeira ativação. Os critérios 2, 4, 5, 12, 14 e 17 ainda
+exigem conversas independentes em cliente suportado; 15 segue dispensado; 28 e 30 não
+podem ser confirmados pela ferramenta, que não informa aplicação do modelo selecionado.
+
+Nenhuma nova observação viva foi produzida nesta retomada. Permanecem pendentes os
+critérios 2, 4, 5, 12, 14, 15, 17, 28, 30, 38, 45, 46 e 47. Próximo requisito externo:
+disponibilizar cliente suportado com conversas independentes e/ou ambiente descartável
+sem `gh`, sem instalar componentes neste host. Fase permanece `REVIEW`.
