@@ -68,6 +68,18 @@ State lives in `<project>/.stilo/state.json`:
 
 (`enxuto` is Portuguese for *lean* — it's the output compression level. See below.)
 
+### Per-task model and effort
+
+The "Model" column is the session target. In `PLAN`, `EXECUTE`, `REVIEW` and `FIX`, the
+coordinator picks model and effort for each delegated task following
+`modules/orquestracao.md`: it rates complexity and risk, uses the smallest adequate
+supported combination, and records the request and the confirmation separately. Your
+explicit choice wins. Without subagents, tasks run serially; without model or effort
+control, the limitation is recorded and no switch is claimed. A failed validation is
+diagnosed before escalating; escalation happens once, for a capability failure, never for
+an environment failure. None of this switches the main session's model or promises lower
+cost or latency.
+
 ## Install
 
 ### Claude Code
@@ -214,7 +226,7 @@ checkout, run `claude plugin validate .`; `claude plugin details stilo-code@stil
 shows the active copy. The installation receives changes only after an authorized install
 or update.
 
-The instruction test monitors a 22,000-character budget for the seven nominal phase
+The instruction test monitors a 26,000-character budget for the seven nominal phase
 contexts. Ambiguities with many projects add text proportionally and remain reported by
 the diagnostic. `UserPromptSubmit` still uses a short state line; `SessionStart` and
 `SubagentStart` load the ruleset needed to keep `AGENTS.md` self-contained.

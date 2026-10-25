@@ -4,7 +4,8 @@
 
 > Ciclo atual (2026-10-19): confiabilidade do agente e preparação do GitHub CLI,
 > detalhada no § 17. Spec e plano aprovados; implementação local verificada, aceites vivos pendentes.
-> Status anterior: emenda aprovada; T01 implementada, retorno a PLAN para corrigir a integração de T02.
+> Ciclo de seleção de modelo e esforço (§ 16): T01–T03 implementadas; review-16 corrigido;
+> review-17 sem achado crítico, alto ou médio.
 > Histórico: rodada 11 limpa; critérios vivos anteriores continuam pendentes.
 
 ## 1. Problema

@@ -50,6 +50,17 @@ O estado fica em `<projeto>/.stilo/state.json`:
 }
 ```
 
+### Modelo e esforço por tarefa
+
+A coluna "Modelo" é o alvo da sessão. Em `PLAN`, `EXECUTE`, `REVIEW` e `FIX`, o coordenador
+escolhe modelo e esforço para cada tarefa delegada conforme `modules/orquestracao.md`:
+classifica complexidade e risco, usa a menor combinação suportada que seja adequada e
+registra pedido e confirmação separadamente. Uma escolha explícita sua prevalece. Sem
+subagentes, as tarefas rodam em série; sem controle de modelo ou de esforço, a limitação é
+registrada, sem alegar troca. Falha de validação é diagnosticada antes de escalar; a
+escalada acontece uma vez, por falha de capacidade, nunca por falha de ambiente. Nada disso
+troca o modelo da sessão principal nem promete redução de custo ou latência.
+
 ## Instalação
 
 Na primeira ativação suportada, o agente prepara o GitHub CLI (`gh`) fora dos hooks.
@@ -211,7 +222,7 @@ checkout, rode `claude plugin validate .`; `claude plugin details stilo-code@sti
 mostra a cópia ativa. A instalação só recebe mudanças após uma nova instalação ou
 atualização autorizada.
 
-O teste de instruções monitora um orçamento de 22.000 caracteres para os contextos nominais
+O teste de instruções monitora um orçamento de 26.000 caracteres para os contextos nominais
 das sete fases. Ambiguidades com muitos projetos acrescentam texto proporcionalmente e
 continuam sendo reportadas pelo diagnóstico. `UserPromptSubmit` usa uma linha curta;
 `SessionStart` e `SubagentStart` carregam o ruleset necessário para manter `AGENTS.md`

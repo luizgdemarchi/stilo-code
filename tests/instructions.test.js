@@ -80,13 +80,22 @@ test('instruções listam campos e bloqueiam ação quando o state é inválido'
   assert.match(contexto, /não (avance|aja)/i);
 });
 
-test('modulosDaFase: EXECUTE leva enxuto, não leva revisor', () => {
+test('modulosDaFase: EXECUTE leva enxuto e orquestração, não leva revisor', () => {
   const modulos = modulosDaFase({ phase: 'EXECUTE', enxuto: 'auto' });
 
   assert.deepStrictEqual(modulos, ['enxuto.md', 'orquestracao.md']);
 });
 
-test('modulosDaFase: REVIEW leva revisor; BRAINSTORM em auto não leva nada', () => {
+test('modulosDaFase: PLAN e FIX levam orquestração; SPEC não leva', () => {
+  assert.deepStrictEqual(modulosDaFase({ phase: 'PLAN', enxuto: 'auto' }), [
+    'enxuto.md',
+    'orquestracao.md',
+  ]);
+  assert.deepStrictEqual(modulosDaFase({ phase: 'SPEC', enxuto: 'auto' }), ['enxuto.md']);
+  assert.deepStrictEqual(modulosDaFase({ phase: 'FIX', enxuto: 'auto' }), ['enxuto.md', 'orquestracao.md']);
+});
+
+test('modulosDaFase: REVIEW leva orquestração e revisor; BRAINSTORM em auto não leva nada', () => {
   assert.deepStrictEqual(modulosDaFase({ phase: 'REVIEW', enxuto: 'auto' }), [
     'enxuto.md',
     'orquestracao.md',
@@ -198,7 +207,7 @@ test('buildStateLine cabe em uma linha mesmo com valor hostil', () => {
   }
 });
 
-test('contexto nominal respeita 16 mil caracteres ou preserva o contexto completo', () => {
+test('contexto nominal respeita 19.500 caracteres ou preserva o contexto completo', () => {
   const fases = ['BRAINSTORM', 'SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'];
   for (const phase of fases) {
     const state = {
@@ -210,7 +219,7 @@ test('contexto nominal respeita 16 mil caracteres ou preserva o contexto complet
       updated: '2026-01-01T00:00:00Z',
     };
     const contexto = buildInjectedContext(state);
-    if (contexto.length > 16000) assert.strictEqual(contexto, buildFullContext(state));
-    else assert.ok(contexto.length <= 16000);
+    if (contexto.length > 19500) assert.strictEqual(contexto, buildFullContext(state));
+    else assert.ok(contexto.length <= 19500);
   }
 });

@@ -63,3 +63,83 @@ test('estado inválido faz fallback byte a byte para contexto completo', () => {
   const state = { version: 1, project: 'x', phase: 'PLAN', reviewRound: 0 };
   assert.strictEqual(buildInjectedContext(state, caminhos), buildFullContext(state, caminhos));
 });
+
+for (const phase of ['PLAN', 'EXECUTE', 'REVIEW', 'FIX']) {
+  test(`política integral no contexto de ${phase}`, () => {
+    const state = { version: 1, project: 'x', phase, reviewRound: 11 };
+    const modulo = fs.readFileSync(path.join(__dirname, '../modules/orquestracao.md'), 'utf8');
+    for (const build of [buildFullContext, buildInjectedContext]) {
+      const contexto = build(state);
+      const blocos = modulo.split(/\n{2}---\n{2}|\n(?=#{1,2}\s)/)
+        .map(s => s.trim()).filter(Boolean);
+      for (const bloco of blocos) assert.ok(contexto.includes(bloco), phase);
+    }
+  });
+}
+
+test('política maior que o orçamento faz fallback byte a byte para contexto completo', () => {
+  const anterior = process.env.CLAUDE_PLUGIN_ROOT;
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-politica-'));
+  fs.copyFileSync(path.join(__dirname, '../AGENTS.md'), path.join(raiz, 'AGENTS.md'));
+  fs.cpSync(path.join(__dirname, '../modules'), path.join(raiz, 'modules'), { recursive: true });
+  fs.appendFileSync(
+    path.join(raiz, 'modules', 'orquestracao.md'),
+    '\n\n## Bloco extenso\n\n' + 'política protegida '.repeat(1000) + '\n'
+  );
+  process.env.CLAUDE_PLUGIN_ROOT = raiz;
+  try {
+    const state = { version: 1, project: 'x', phase: 'PLAN', reviewRound: 11, enxuto: 'auto' };
+    const completo = buildFullContext(state);
+    assert.match(completo, /Bloco extenso/);
+    assert.strictEqual(buildInjectedContext(state), completo);
+  } finally {
+    if (anterior === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
+    else process.env.CLAUDE_PLUGIN_ROOT = anterior;
+    fs.rmSync(raiz, { recursive: true, force: true });
+  }
+});
+
+for (const phase of ['SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX']) {
+  test(`compactação de ${phase} preserva estado em disco e gatilhos de módulos`, () => {
+    const state = { version: 1, project: 'x', phase, reviewRound: 12, enxuto: 'auto', updated: '2026-01-01T00:00:00Z' };
+    const contexto = buildInjectedContext(state);
+    assert.match(contexto, /## 3\. Estado em disco/);
+    assert.match(contexto, /ISO 8601/);
+    assert.match(contexto, /## 5\. Módulos/);
+    assert.match(contexto, /modules\/frontend\.md/);
+  });
+}
+
+// REVIEW protege mais que o orçamento e usa o contexto completo; as demais fases compactam.
+for (const phase of ['PLAN', 'EXECUTE', 'REVIEW', 'FIX']) test(`${phase} com checkpoint no limite preserva estado e checkpoint`, () => {
+  const projeto = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-checkpoint-'));
+  try {
+    fs.mkdirSync(path.join(projeto, '.stilo'));
+    const statePath = path.join(projeto, '.stilo', 'state.json');
+    // Campos acima dos limites de `sanitiza`: mede o pior caso real do bloco de estado.
+    const state = { version: 1, project: 'x'.repeat(200), phase, reviewRound: 12, enxuto: 'auto', updated: '2026-01-01T00:00:00Z' };
+    fs.writeFileSync(statePath, JSON.stringify(state));
+    fs.writeFileSync(path.join(projeto, '.stilo', 'checkpoint.json'), JSON.stringify({
+      version: 1,
+      cycle: 'ciclo',
+      phase,
+      task: 't'.repeat(200),
+      decisions: ['d'],
+      verified: ['v'],
+      pending: ['p'.repeat(400)],
+      nextAction: 'a'.repeat(400),
+      updated: '2026-01-01T00:00:00Z',
+    }));
+    const caminhos = Object.assign([statePath], { statePath, status: 'valid' });
+    const completo = buildFullContext(state, caminhos);
+    const injetado = buildInjectedContext(state, caminhos);
+    assert.match(completo, /checkpoint/);
+    if (phase === 'REVIEW') assert.strictEqual(injetado, completo);
+    else assert.ok(injetado.length < completo.length, 'fallback: ' + injetado.length);
+    assert.match(injetado, /checkpoint/);
+    assert.match(injetado, /## 3\. Estado em disco/);
+    assert.match(injetado, /## 5\. Módulos/);
+  } finally {
+    fs.rmSync(projeto, { recursive: true, force: true });
+  }
+});

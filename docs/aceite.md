@@ -33,13 +33,13 @@ permanecem pendentes e o projeto não é declarado `DONE`.
 | 25 | T1/T2 | teste textual de segurança | local | nenhuma remoção ou edição automática | `tests/audit.test.js`, review-10 |
 | 26 | T1/T2 | contrato de transição | local | sugestão aceita retorna a `FIX` → `REVIEW` | `tests/audit.test.js`, review-10 |
 | 27 | T1/T2 | lista de áreas protegidas | local | referências dinâmicas e artefatos protegidos exigem confirmação | `tests/audit.test.js`, review-10 |
-| 28 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato local passou; escolha real de modelo não observada | ciclo 2026-10-19 |
-| 29 | T01 | `node --test tests/orchestration.test.js` | local | contrato de risco e preferência explícita verificado | ciclo 2026-10-19 |
-| 30 | T01 | contrato e registro de execução | pendente | pedido separado de confirmação; aplicação real não informada | ciclo 2026-10-19 |
-| 31 | T01 | `node --test tests/orchestration.test.js` | local | diagnóstico e limite de escalada no contrato | ciclo 2026-10-19 |
-| 32 | T01 | `node --test tests/orchestration.test.js` | local | fallback honesto no contrato; execução atual serial | ciclo 2026-10-19 |
-| 33 | T01/T08 | testes de contexto e sincronização | local | política integral preservada ou fallback completo | ciclo 2026-10-19 |
-| 34 | T02/T08 | testes do validador e suíte | local | regressão local; nenhuma delegação presumida | ciclo 2026-10-19 |
+| 28 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: classificação por tarefa com modelo e esforço separados; seleção efetiva observada: pendente | review-16, review-17 |
+| 29 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: risco prevalece sobre tamanho; preferência explícita prevalece; seleção efetiva observada: pendente | review-16, review-17 |
+| 30 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: `Aplicação confirmada: não informada pela ferramenta` é saída válida; seleção efetiva observada: pendente | review-16, review-17 |
+| 31 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: diagnóstico antes de escalar, uma escalada, falha de ambiente sem escalada; seleção efetiva observada: pendente | review-16, review-17 |
+| 32 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: fallback sem subagentes, sem controle de modelo e sem controle de esforço; seleção efetiva observada: pendente | review-16, review-17 |
+| 33 | T02 | `node --test tests/context.test.js tests/instructions.test.js` e `node scripts/sync-adapters.js --check` | local | política integral em PLAN/EXECUTE/REVIEW/FIX, compactada ou em fallback; 6 adaptadores em dia | review-16, review-17 |
+| 34 | T01/T02/T03 | `npm.cmd test` | local | 130 testes: 129 passados, 0 falhas, 1 pulado (smoke OpenCode opt-in), após integrar o ciclo de 2026-10-19 | review-16, review-17 |
 | 35 | T04 | `node --test tests/harness-evaluation.test.js` | local | baseline falha exatamente tenant/identity; correção em cópia passa | ciclo 2026-10-19 |
 | 36 | T09 | roteiros E01 e E03 | viva | quatro contextos Codex independentes; E01 parou sem aprovação/edição, E03 relatou achado fora da cópia; hashes da cópia intactos | relatório de avaliação do ciclo |
 | 37 | T09 | roteiros E02 e E04 | viva | quatro contextos Codex independentes; ambos verificaram baseline, corrigiram só `src/records.js` em cópias e passaram os sete checks; E04 reconciliou checkpoint antes da aprovação | relatório de avaliação do ciclo |
@@ -59,8 +59,8 @@ permanecem pendentes e o projeto não é declarado `DONE`.
 
 Os critérios 2, 4, 5, 12, 14 e 17 exigem conversas independentes em cliente suportado;
 esta sessão não comprova novos projetos, `/clear` ou transições vivas. O critério 15
-permanece dispensado. Os critérios 28 e 30 dependem de seleção/aplicação de modelo
-confirmáveis pela ferramenta; isso não foi exposto nesta sessão. O critério 38 exige
+permanece dispensado. A seleção efetiva dos critérios 28–32 depende de seleção/aplicação
+de modelo confirmáveis pela ferramenta; isso ainda não foi observado. O critério 38 exige
 recuperação de escritor delegado ainda ativo; não havia escritor ativo para recuperar.
 
 Verificação do host em 2026-10-19: `gh.exe` está presente (2.102.0), e `winget`,
@@ -69,6 +69,20 @@ disponíveis. `wsl --list --quiet` informou que o Subsistema do Windows para Lin
 está instalado. Assim, não há alvo descartável suportado para instalar `gh` ausente,
 nem cliente instalado para observar primeira ativação. Não foi instalado gerenciador,
 distribuição ou pacote; critérios 45–47 permanecem pendentes.
+
+## Seleção efetiva observada
+
+Os critérios 28–32 acima têm só o contrato verificado localmente: testes textuais não
+comprovam que um modelo ou esforço foi aplicado. Para registrar a seleção efetiva, delegue
+uma tarefa real e delimitada num agente que exponha subagentes e anote:
+
+1. capacidades expostas pela ferramenta (subagentes, controle de modelo, controle de esforço);
+2. modelo e esforço solicitados, com a classificação e a justificativa do contrato;
+3. confirmação retornada pela ferramenta, ou `não informada pela ferramenta`;
+4. resultado da validação da tarefa.
+
+Só marque a linha viva como atendida com essa evidência. Sem confirmação da ferramenta, ela
+permanece pendente. Não crie subagente fictício para declarar aceite.
 
 ## Evidência histórica preservada
 

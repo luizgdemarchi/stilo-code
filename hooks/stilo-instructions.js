@@ -10,7 +10,7 @@ const path = require('path');
 const { normalizeFase, readCheckpoint, resolveEnxuto } = require('./stilo-state.js');
 const { selectContextBlocks } = require('./stilo-context.js');
 
-const CONTEXT_BUDGET = 16000;
+const CONTEXT_BUDGET = 19500;
 
 // Próxima ação concreta de cada fase. É o campo que impede o agente de retomar
 // um projeto sabendo a fase mas não o que fazer nela.
@@ -159,7 +159,7 @@ function diagnosticoEstado(state, caminhos) {
 function modulosDaFase(state) {
   const modulos = [];
   if (resolveEnxuto(state) !== 'off') modulos.push('enxuto.md');
-  if (['PLAN', 'EXECUTE', 'REVIEW'].includes(fase(state))) modulos.push('orquestracao.md');
+  if (['PLAN', 'EXECUTE', 'REVIEW', 'FIX'].includes(fase(state))) modulos.push('orquestracao.md');
   if (fase(state) === 'REVIEW') modulos.push('revisor.md');
   if (fase(state) === 'DONE') modulos.push('auditoria.md');
   return modulos;
@@ -331,6 +331,8 @@ function buildInjectedContext(state, caminhos) {
       'Travas de segurança',
       'Negações',
       'Mensagens de erro',
+      '## 3. Estado em disco',
+      '## 5. Módulos',
       ...modulosProtegidos,
     ],
   });

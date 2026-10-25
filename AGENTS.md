@@ -138,8 +138,8 @@ token ou alterar contas. Sem gh, o pipeline continua; não criar projeto para pr
 Nenhum hook troca o modelo da sessão. Confira em que modelo você está rodando e avise o
 usuário **só quando houver divergência** — uma linha, sem insistir.
 
-A tabela abaixo define o alvo geral da sessão. Nas fases `PLAN`, `EXECUTE` e `REVIEW`, a
-seleção por tarefa segue `modules/orquestracao.md`: avalia risco e complexidade, respeita a
+A tabela abaixo define o alvo geral da sessão. Nas fases `PLAN`, `EXECUTE`, `REVIEW` e `FIX`,
+a seleção por tarefa segue `modules/orquestracao.md`: avalia risco e complexidade, respeita a
 preferência explícita do usuário e registra pedido e confirmação separadamente. Nunca afirme
 que modelo ou esforço foi aplicado quando a ferramenta não confirmar.
 
@@ -157,7 +157,7 @@ gatilho vale.
 | Módulo | Carregar quando |
 |---|---|
 | `modules/enxuto.md` | Sempre que `enxuto` resolver para `leve` ou `pleno` |
-| `modules/orquestracao.md` | Fase `PLAN`, `EXECUTE` ou `REVIEW` |
+| `modules/orquestracao.md` | Fase `PLAN`, `EXECUTE`, `REVIEW` ou `FIX` |
 | `modules/revisor.md` | Fase `REVIEW` |
 | `modules/frontend.md` | `EXECUTE` ou `REVIEW`, **e** o diff toca interface de usuário |
 | `modules/autoria-skill.md` | `PLAN` ou `EXECUTE`, **e** o projeto **é** uma skill ou plugin de agente |

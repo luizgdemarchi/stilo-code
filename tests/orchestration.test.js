@@ -56,21 +56,47 @@ test('seleção registra pedido, confirmação e resultado separadamente', () =>
   assert.match(texto, /não informada pela ferramenta/i);
 });
 
+// Cláusulas exatas, sem flag `s`: palavra-chave solta passaria com a regra invertida.
+const CLAUSULAS = [
+  /^Carregue somente nas fases `PLAN`, `EXECUTE`, `REVIEW` e `FIX`\.$/m,
+  /Escolhas explícitas do usuário prevalecem\./,
+  /Sem preferência explícita, não pergunte o modelo a cada tarefa\./,
+  /^- Edição mecânica verificável: menor modelo adequado e esforço baixo\.$/m,
+  /^- Lógica comum: esforço médio\.$/m,
+  /^- Arquitetura, segurança, revisão crítica ou incerteza alta: capacidade maior e esforço alto suportado\.$/m,
+  /uma linha em autenticação, permissões, dados ou operação\s+destrutiva não é simples só por ser curta\./,
+  /não invente equivalência nem alegue\s+uma troca que a ferramenta não confirmou\./,
+  /Sem subagentes, execute em série\./,
+  /^- Permissões: mesmo uma alteração curta não é classificada como simples\.$/m,
+  /^- Ausência de subagentes: o coordenador executa em série\.$/m,
+  /^- Sem controle de modelo ou sem controle de esforço: usar o disponível e registrar a limitação\.$/m,
+];
+
+const ESCALADA = [
+  /Quando a validação falhar, diagnosticar a causa antes de escalar\./,
+  /Falha de capacidade permite\s+escalar modelo ou esforço uma vez/,
+  /Falha de ambiente não provoca escalada\./,
+  /Se a escalada terminar sem sucesso, o coordenador reassume e registra o impedimento\./,
+  /^Ambiente: comando ausente, permissão ou sandbox, rede, dependência ou teste instável\.$/m,
+  /^Capacidade: resultado errado com o ambiente íntegro\.$/m,
+];
+
 test('seleção pondera risco e tem fallback honesto', () => {
   const texto = le('modules/orquestracao.md');
-  assert.match(texto, /edição mecânica/i);
-  assert.match(texto, /lógica comum/i);
-  assert.match(texto, /arquitetura.*segurança.*incerteza/is);
-  assert.match(texto, /permissões.*não.*simples/is);
-  assert.match(texto, /sem subagentes.*série/is);
-  assert.match(texto, /sem controle de modelo/i);
-  assert.match(texto, /sem controle de esforço/i);
+  for (const clausula of CLAUSULAS) assert.match(texto, clausula);
 });
 
 test('escalada distingue falha de capacidade de falha de ambiente', () => {
   const texto = le('modules/orquestracao.md');
-  assert.match(texto, /diagnosticar.*antes.*escalar/is);
-  assert.match(texto, /falha de capacidade.*escalar.*uma vez/is);
-  assert.match(texto, /falha de ambiente não provoca escalada/i);
-  assert.match(texto, /escalada.*sem sucesso.*coordenador reassume/is);
+  for (const clausula of ESCALADA) assert.match(texto, clausula);
+});
+
+test('cláusulas exatas rejeitam a política invertida', () => {
+  const texto = le('modules/orquestracao.md')
+    .replace('menor modelo adequado e esforço baixo', 'maior modelo e esforço alto')
+    .replace('não é simples só por ser curta', 'é simples por ser curta')
+    .replace('Sem subagentes, execute em série', 'Sem subagentes, bloqueie e peça instalação')
+    .replace('Falha de ambiente não provoca escalada', 'Falha de ambiente provoca escalada');
+  const falhas = [...CLAUSULAS, ...ESCALADA].filter((clausula) => !clausula.test(texto));
+  assert.strictEqual(falhas.length, 4);
 });

@@ -1,4 +1,4 @@
-Carregue somente nas fases `PLAN`, `EXECUTE` e `REVIEW`.
+Carregue somente nas fases `PLAN`, `EXECUTE`, `REVIEW` e `FIX`.
 
 # Orquestração multiagente
 
@@ -6,13 +6,14 @@ Cada tarefa declara `ID`, descrição, especialista, `Files:` com caminhos exato
 
 Antes de delegar, o coordenador verifica as capacidades expostas pela ferramenta e classifica
 a tarefa por complexidade, risco, ambiguidade, contexto necessário e verificabilidade. A fase
-é um sinal, não a classificação inteira. Escolhas explícitas do usuário prevalecem. Modelo e
-esforço são decisões separadas e usam somente combinações suportadas. Para toda tarefa, escolha
-o modelo menos exigente que ainda seja adequado entre os modelos disponíveis.
+é um sinal, não a classificação inteira. Escolhas explícitas do usuário prevalecem.
+Sem preferência explícita, não pergunte o modelo a cada tarefa. Modelo e esforço são
+decisões separadas e usam somente combinações suportadas. Para toda tarefa, escolha o modelo
+menos exigente que ainda seja adequado entre os modelos disponíveis.
 
 - Edição mecânica verificável: menor modelo adequado e esforço baixo.
 - Lógica comum: esforço médio.
-- Arquitetura, segurança ou incerteza alta: capacidade maior e esforço alto suportado.
+- Arquitetura, segurança, revisão crítica ou incerteza alta: capacidade maior e esforço alto suportado.
 
 Tamanho não substitui risco: uma linha em autenticação, permissões, dados ou operação
 destrutiva não é simples só por ser curta.
@@ -43,6 +44,10 @@ Quando a validação falhar, diagnosticar a causa antes de escalar. Falha de cap
 escalar modelo ou esforço uma vez, levando a evidência da falha. Falha de ambiente não provoca escalada.
 Se a escalada terminar sem sucesso, o coordenador reassume e registra o impedimento.
 
+Ambiente: comando ausente, permissão ou sandbox, rede, dependência ou teste instável.
+
+Capacidade: resultado errado com o ambiente íntegro.
+
 Tarefas só compartilham uma onda quando não há dependência direta ou transitiva e os conjuntos de arquivos são totalmente disjuntos.
 
 Marcação incerta ou não exata depende de todas as tarefas anteriores e roda em série.
@@ -54,8 +59,6 @@ Revisores não escrevem no código.
 O coordenador espera todos, captura `HEAD` antes de cada commit, commita em ordem e só então libera a revisão.
 
 Worktree isolada é último recurso quando a separação por arquivo não for possível.
-
-## Cenários de decisão
 
 ## Recursos exclusivos
 
@@ -71,6 +74,8 @@ Só um responsável possui cada recurso até encerrar seu uso.
 Recuperação interrompida: compare checkout e evidências; confirme que o escritor anterior
 parou antes de assumir seus arquivos. Sem essa confirmação, continue apenas trabalho
 independente. Não descarte mudanças locais nem use relato de sucesso como prova.
+
+## Cenários de decisão
 
 - Edição mecânica: alteração repetitiva e verificável usa a menor capacidade adequada.
 - Lógica comum: mudança de comportamento com teste usa esforço médio.

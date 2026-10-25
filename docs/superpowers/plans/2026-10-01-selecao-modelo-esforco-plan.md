@@ -4,7 +4,7 @@
 
 **Objetivo:** orientar a escolha automática e rastreável de modelo e esforço por tarefa, respeitando capacidades disponíveis e escolhas do usuário.
 
-**Arquitetura:** política normativa em `modules/orquestracao.md`, resumo em `AGENTS.md` e distribuição pelos seis adaptadores existentes. O contexto já protege todos os blocos dos módulos da fase; aproveitar esse mecanismo antes de alterar runtime. Não haverá roteador executável nem catálogo fixo de provedores.
+**Arquitetura:** política normativa em `modules/orquestracao.md`, resumo em `AGENTS.md` e distribuição pelos seis adaptadores existentes. O contexto protege todos os blocos dos módulos da fase; T02 inclui `orquestracao.md` nesses módulos em `PLAN`, `EXECUTE`, `REVIEW` e `FIX` (FIX por emenda após review-16), sem alterar assinaturas nem algoritmo; os orçamentos sobem por decisão do usuário (ver Restrições). Não haverá roteador executável nem catálogo fixo de provedores.
 
 **Tecnologia:** Markdown, CommonJS e `node:test`, sem dependências novas.
 
@@ -19,7 +19,9 @@
 - Falha de ambiente não provoca escalada. Após uma escalada sem sucesso, o coordenador reassume e registra o impedimento.
 - Sem subagentes, executar em série; sem controle de modelo ou esforço, registrar a limitação sem alegar troca.
 - Implementadores não fazem commit; coordenador captura `HEAD` e serializa commits locais, sem push, instalação ou publicação.
-- Preservar spec, reviews 01–11 e pendências vivas anteriores. Próximo review: 12, salvo avanço concorrente comprovado.
+- Preservar spec, reviews 01–11 e pendências vivas anteriores. Próximo review: 12, salvo avanço concorrente comprovado. Avanço comprovado na integração: o ciclo remoto de 2026-10-19 gravou review-12 a review-15; este ciclo usa review-16 e review-17.
+- Orçamentos (decisão do usuário, 2026-10-24): `CONTEXT_BUDGET` 16.000 → 17.000 e orçamento nominal monitorado 22.000 → 26.000. Motivo: com a política, REVIEW tem 25.596 caracteres completos e 16.648 protegidos; nenhuma redundância pura cobre a diferença.
+- Emenda após review-16 (decisão do usuário, 2026-10-24): `CONTEXT_BUDGET` 17.000 → 19.500, `## 3. Estado em disco` e `## 5. Módulos` de `AGENTS.md` passam a blocos protegidos, e `orquestracao.md` também é carregado em `FIX`. Motivo: com 17.000 a compactação descartava § 3/§ 5 e um checkpoint no limite forçava o fallback em REVIEW.
 - Execução serial: as tarefas dependem da política e da sua distribuição; não há ganho em implementar arquivos compartilhados em paralelo.
 
 ## Foco da revisão
@@ -63,7 +65,7 @@ test('seleção registra pedido e confirmação separadamente', () => {
 - [ ] Incluir três orientações: trabalho mecânico verificável usa menor modelo adequado e esforço baixo; lógica comum usa esforço médio; arquitetura, segurança e incerteza alta usam capacidade maior e esforço alto suportado. Não equiparar tamanho a risco.
 - [ ] Incluir exemplo de contrato com os oito campos acima; `Aplicação confirmada: não informada pela ferramenta` deve ser uma saída válida. Falta de modelo solicitado exige relato explícito, sem inventar equivalência.
 - [ ] Acrescentar cenários comentados e testes textuais para edição mecânica, lógica comum, arquitetura, permissões, preferência explícita, ausência de subagentes, ausência de controle de modelo, ausência de controle de esforço, falha de capacidade e falha de ambiente. Os testes verificam instruções, não executam um classificador fictício.
-- [ ] Em `AGENTS.md` § 4, distinguir modelo alvo da sessão e seleção por tarefa; remeter ao módulo nas fases PLAN/EXECUTE/REVIEW, sem remover a tabela ou as regras atuais de ondas.
+- [ ] Em `AGENTS.md` § 4, distinguir modelo alvo da sessão e seleção por tarefa; remeter ao módulo nas fases PLAN/EXECUTE/REVIEW/FIX (FIX por emenda após review-16), sem remover a tabela ou as regras atuais de ondas.
 - [ ] Rodar novamente o teste direcionado. Verificar também que permanecem separação de arquivos, espera de implementadores e commits pelo coordenador.
 
 ### Tarefa T02: Contexto automático e adaptadores
@@ -85,7 +87,7 @@ Depends-on: T01
 
 **Classificação:** integração com risco de perda de instruções; seleção solicitada conforme restrição do ciclo.
 
-**Interface:** consumir `buildFullContext(state, caminhos)` e `buildInjectedContext(state, caminhos)` existentes. Incluir `orquestracao.md` em `modulosDaFase()` para `PLAN`, `EXECUTE` e `REVIEW`, ajustando as expectativas do teste unitário. Não alterar assinaturas, orçamento ou algoritmo de seleção.
+**Interface:** consumir `buildFullContext(state, caminhos)` e `buildInjectedContext(state, caminhos)` existentes. Incluir `orquestracao.md` em `modulosDaFase()` para `PLAN`, `EXECUTE`, `REVIEW` e `FIX` (FIX por emenda após review-16), ajustando as expectativas do teste unitário. Elevar `CONTEXT_BUDGET` para 19.500 (17.000 antes da emenda), proteger `## 3. Estado em disco` e `## 5. Módulos` e o limite do teste `contexto nominal por fase respeita o orçamento` para 26.000. Não alterar assinaturas nem algoritmo de seleção.
 
 - [ ] Incluir o teste abaixo em `tests/context.test.js`:
 
@@ -104,7 +106,7 @@ for (const phase of ['PLAN', 'EXECUTE', 'REVIEW']) {
 }
 ```
 
-- [ ] Adicionar cenário com raiz temporária usando o padrão de `CLAUDE_PLUGIN_ROOT` já existente: copiar ruleset/módulos necessários, acrescentar ao módulo protegido um bloco maior que 16.000 caracteres e exigir igualdade byte a byte entre contexto injetado e completo. Restaurar variável em `finally`.
+- [ ] Adicionar cenário com raiz temporária usando o padrão de `CLAUDE_PLUGIN_ROOT` já existente: copiar ruleset/módulos necessários, acrescentar ao módulo protegido um bloco maior que 17.000 caracteres e exigir igualdade byte a byte entre contexto injetado e completo. Restaurar variável em `finally`.
 - [ ] Acrescentar `require('./context.test.js');` a `tests/all.test.js`, que hoje não inclui essa suíte. Não duplicar importações nem criar arquivo agregador novo.
 - [ ] Rodar `node --test tests/context.test.js tests/instructions.test.js`. O contexto nominal deve continuar menor que o completo; se a política impedir isso, reduzir redundância normativa sem remover requisitos. Se exigir redesenho de runtime, retornar a PLAN.
 - [ ] Executar `node scripts/sync-adapters.js`, sem editar saídas geradas à mão. A escrita em `.agents` pode exigir aprovação do sandbox; usar a solicitação da ferramenta se necessário.
@@ -118,6 +120,8 @@ Files:
 - Modify: `README.md`
 - Modify: `README.en.md`
 - Modify: `docs/aceite.md`
+- Modify: `hooks/stilo-diagnostics.js`
+- Modify: `tests/diagnostics.test.js`
 Depends-on: T02
 
 **Classificação:** documentação verificável; seleção solicitada conforme restrição do ciclo.
@@ -125,6 +129,7 @@ Depends-on: T02
 **Interface:** matriz de critérios 28–34 vinculada às evidências locais e a uma observação viva separada.
 
 - [ ] Documentar seleção por tarefa, respeito à preferência explícita, fallback e escalada limitada nos dois READMEs. Não prometer custo, latência ou troca automática da sessão.
+- [ ] Atualizar nos dois READMEs o parágrafo do orçamento nominal para 26.000 caracteres, sem prometer redução de custo.
 - [ ] Adicionar à matriz: 28–32 cobertos pelo contrato e cenários de T01; 33 pelos adaptadores/contexto de T02; 34 pelos testes existentes de orquestração/plano e suíte completa.
 - [ ] Registrar cenário vivo reproduzível: delegar uma tarefa real delimitada; anotar capacidades expostas, pedido de modelo/esforço, confirmação retornada e resultado da validação. Só marcar comprovado com essa evidência; ausência de confirmação permanece pendente. Não criar subagente fictício apenas para declarar aceite.
 - [ ] Preservar critérios antigos pendentes e separar `contrato verificado localmente` de `seleção efetiva observada`. Vincular o review novo somente após ele existir.
@@ -135,14 +140,14 @@ Depends-on: T02
 ID: T04
 Especialista: revisor independente e coordenador
 Files:
-- Create: `.stilo/review-12.md`
+- Create: `.stilo/review-16.md`
 - Modify: `.stilo/state.json`
 Depends-on: T03
 
 **Classificação:** revisão crítica; solicitar `gpt-5.6-sol` / `xhigh` conforme usuário; registrar limitação se indisponível.
 
 - [ ] Aguardar todos os implementadores, capturar `HEAD` e revisar diff acumulado contra spec § 16 e este plano; carregar `modules/revisor.md` e `modules/orquestracao.md`.
-- [ ] Usar `superpowers:requesting-code-review`; revisor independente relata, coordenador grava achados com arquivo, linha, gravidade, cenário e correção no review 12. Se `reviewRound` avançou, usar o próximo número sem sobrescrever histórico.
+- [ ] Usar o fluxo de pedido de revisão do companion `superpowers`, se disponível; revisor independente relata, coordenador grava achados com arquivo, linha, gravidade, cenário e correção no review 16. Se `reviewRound` avançou, usar o próximo número sem sobrescrever histórico.
 - [ ] Resolver achados em FIX e produzir novos reviews sequenciais até zero erros; a lista exata de arquivos das correções vem dos achados, não autoriza expansão de escopo.
 - [ ] Reexecutar os testes afetados pelas correções e as verificações finais quando pertinentes. Não declarar aceite vivo com base em regex ou testes locais.
 - [ ] Atualizar estado e rodada com UTC real. Encerrar somente com review limpo, relatando pendências vivas; oferecer auditoria opcional conforme pipeline. Não executar auditoria nem publicação por implicação.
