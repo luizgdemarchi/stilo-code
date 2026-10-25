@@ -1,0 +1,673 @@
+[
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-instructions.js:blocoEstado:write-repair-directive-to-unverified-state-identity",
+        "title":  "InstruÃ§Ãµes de reparo do state.json podem direcionar gravaÃ§Ãµes atravÃ©s de um link simbÃ³lico",
+        "description":  "A descoberta aceita um caminho de `.stilo/state.json` que existe, e o leitor segue links. Para estado invÃ¡lido ou ilegÃ­vel, o contexto injetado instrui o agente a corrigir o arquivo; para estado vÃ¡lido, manda gravar nele as transiÃ§Ãµes de fase. Se um projeto puder fornecer um link para um arquivo fora do projeto, uma gravaÃ§Ã£o da ferramenta do agente poderia atingir esse destino. O cÃ³digo confirma a descoberta e as instruÃ§Ãµes, mas nÃ£o demonstra se o host permite a gravaÃ§Ã£o atravÃ©s do link ou se o agente a tentaria.",
+        "claimed_root_cause":  "`findStateFiles` usa `fs.existsSync` sem validar a identidade ou a contenÃ§Ã£o do caminho; `resolveProjeto` mantÃ©m o caminho lexical e `readStateResult` o lÃª seguindo links. `blocoEstado` e `buildStateLine` entÃ£o instruem a corrigir ou atualizar `.stilo/state.json` sem verificar que o destino real estÃ¡ dentro do projeto.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  9,
+                          "scope":  "SessionStart",
+                          "description":  "O hook resolve o projeto a partir do diretÃ³rio de trabalho do processo; os hooks de SubagentStart e UserPromptSubmit tambÃ©m resolvem o estado."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  87,
+                          "scope":  "findStateFiles",
+                          "description":  "`fs.existsSync` aceita o caminho existente sem verificar se `.stilo` ou `state.json` Ã© um link simbÃ³lico."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  132,
+                          "scope":  "readStateResult",
+                          "description":  "O estado Ã© lido pelo caminho lexical, seguindo um link; um destino nÃ£o JSON resulta em estado ilegÃ­vel e um objeto sem campos vÃ¡lidos pode resultar em estado invÃ¡lido."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  234,
+                          "scope":  "blocoEstado",
+                          "description":  "Para estado invÃ¡lido, o contexto manda corrigir o `state.json`; a ramificaÃ§Ã£o ilegÃ­vel dÃ¡ instruÃ§Ã£o equivalente."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  290,
+                          "scope":  "blocoEstado",
+                          "description":  "No caminho de estado vÃ¡lido, o contexto manda gravar as transiÃ§Ãµes seguintes em `.stilo/state.json`; o efeito depende da ferramenta de escrita e do comportamento do agente."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  87,
+                             "description":  "A descoberta retorna o primeiro caminho existente sem `lstat`, verificaÃ§Ã£o de arquivo regular ou contenÃ§Ã£o."
+                         },
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  132,
+                             "description":  "`readStateResult` usa `fs.readFileSync` no caminho descoberto, seguindo links."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  217,
+                             "description":  "A ramificaÃ§Ã£o ilegÃ­vel instrui a corrigir `state.json` antes de agir."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  234,
+                             "description":  "A ramificaÃ§Ã£o invÃ¡lida instrui a corrigir todos os campos de `state.json` antes de agir."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  290,
+                             "description":  "A ramificaÃ§Ã£o vÃ¡lida instrui gravar a prÃ³xima fase em `.stilo/state.json`."
+                         },
+                         {
+                             "file":  "AGENTS.md",
+                             "line":  99,
+                             "description":  "As regras injetadas atribuem ao agente a gravaÃ§Ã£o das transiÃ§Ãµes de fase nesse caminho."
+                         },
+                         {
+                             "file":  "hooks/stilo-diagnostics.js",
+                             "line":  13,
+                             "description":  "O leitor de diagnÃ³stico tem uma verificaÃ§Ã£o `isFile`, mas nÃ£o Ã© usado pelo caminho dos hooks e essa verificaÃ§Ã£o, por si sÃ³, segue links."
+                         }
+                     ],
+        "blockers":  [
+                         "O comportamento das ferramentas de escrita do Claude Code e do Codex nÃ£o Ã© estabelecido pelo cÃ³digo: nÃ£o se sabe se seguem um link simbÃ³lico nesse caminho nem se a verificaÃ§Ã£o de permissÃ£o resolve o destino real e pede autorizaÃ§Ã£o fora do projeto.",
+                         "A materializaÃ§Ã£o de links depende do sistema e da configuraÃ§Ã£o do checkout; um checkout Windows padrÃ£o pode representar o link como arquivo de texto, enquanto o caminho em sistemas POSIX ainda precisa de validaÃ§Ã£o.",
+                         "NÃ£o foi observado se o agente tentaria reparar ou atualizar o arquivo depois de ver o conteÃºdo do destino; o agente pode reportar a anomalia em vez de gravÃ¡-lo.",
+                         "A sessÃ£o nÃ£o dispÃµe de sandbox de sistema operacional, portanto o hook e o comportamento da ferramenta de escrita nÃ£o foram executados."
+                     ],
+        "validation_plan":  {
+                                "local":  "Em uma VM POSIX descartÃ¡vel, sem rede e com perfil de usuÃ¡rio dummy, criar um arquivo de configuraÃ§Ã£o de teste fora do projeto e um projeto descartÃ¡vel cujo `.stilo/state.json` seja um link para esse arquivo. Com o alvo somente leitura, verificar primeiro se o hook injeta a instruÃ§Ã£o de reparo; em seguida, em uma sessÃ£o descartÃ¡vel e sem dados reais, observar se a ferramenta de escrita segue o link, mostra o destino resolvido no pedido de permissÃ£o ou bloqueia a gravaÃ§Ã£o. Confirmar que o arquivo dummy permanece intacto ao final. NÃ£o executar se nÃ£o houver isolamento adequado.",
+                                "deployment":  "Em perfis descartÃ¡veis de Claude Code e Codex, usar um projeto de teste e um arquivo dummy fora dele, sem credenciais ou conteÃºdo sensÃ­vel. Registrar se o host apresenta uma confirmaÃ§Ã£o de gravaÃ§Ã£o fora do projeto e qual caminho mostra; nÃ£o aprovar nem realizar uma gravaÃ§Ã£o que altere o arquivo dummy."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-instructions.js:buildFullContext:companion-name-endorsement",
+        "title":  "Recomendações de companions podem parecer endosso a um servidor MCP do projeto com o mesmo nome",
+        "description":  "O ruleset do plugin recomenda `context7` e `playwright` como companions MCP e orienta o agente a aproveitá-los quando disponíveis. Se o host carregar um servidor MCP fornecido por um projeto não confiável com um desses nomes, o agente pode interpretar a recomendação como endosso e enviar contexto ao servidor. A fonte confirma que o texto é mantido pelo plugin e injetado no contexto. O repositório não estabelece se o host carrega configuração MCP do projeto, como identifica a origem e o consentimento do servidor, nem se o agente o seleciona por causa da recomendação.",
+        "claimed_root_cause":  "O plugin injeta nomes de servidores MCP sem vinculá-los a uma identidade autenticada nem distinguir servidores do plugin de servidores do projeto. O possível cruzamento de confiança depende do carregamento e da seleção feitos pelo host e pelo agente, não estabelecidos pelo código auditado.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/claude-codex-hooks.json",
+                          "line":  5,
+                          "scope":  "SessionStart matcher",
+                          "description":  "O manifesto registra o hook SessionStart para startup, resume, clear e compact."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  9,
+                          "scope":  "SessionStart",
+                          "description":  "O hook resolve o projeto e prepara o contexto de sessão."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  298,
+                          "scope":  "buildFullContext",
+                          "description":  "O contexto inclui o AGENTS.md lido da raiz do plugin."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "AGENTS.md",
+                          "line":  244,
+                          "scope":  "lista de companions",
+                          "description":  "O texto injetado identifica `context7` como companion MCP; também lista `playwright` na linha 245."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  11,
+                          "scope":  "saída do hook SessionStart",
+                          "description":  "O contexto montado é enviado ao host; seleção do servidor de mesmo nome e eventual envio de dados dependem do host e do agente."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "AGENTS.md",
+                             "line":  233,
+                             "description":  "Orienta aproveitar companions instalados."
+                         },
+                         {
+                             "file":  "AGENTS.md",
+                             "line":  244,
+                             "description":  "Lista `context7` como MCP."
+                         },
+                         {
+                             "file":  "AGENTS.md",
+                             "line":  245,
+                             "description":  "Lista `playwright` como MCP."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  45,
+                             "description":  "`lerArquivo` lê as instruções a partir de `pluginRoot`."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  298,
+                             "description":  "`buildFullContext` inclui o AGENTS.md do plugin."
+                         },
+                         {
+                             "file":  "hooks/stilo-activate.js",
+                             "line":  11,
+                             "description":  "SessionStart envia o contexto montado ao host."
+                         },
+                         {
+                             "file":  "hooks/stilo-context.js",
+                             "line":  12,
+                             "description":  "A seleção trata blocos de texto e marcadores, sem vincular nomes de companions a identidades de servidores."
+                         }
+                     ],
+        "blockers":  [
+                         "O código não estabelece se Claude Code ou Codex carrega configuração MCP local do projeto, quais controles de consentimento aplica ou se a interface identifica a origem e o endpoint do servidor.",
+                         "Não foi observado se o agente interpreta a recomendação de nome como endosso, seleciona um servidor de projeto com o mesmo nome ou envia contexto a ele. Isso é necessário para demonstrar o efeito na fronteira de confiança."
+                     ],
+        "validation_plan":  {
+                                "local":  "Em uma VM Linux descartável, sem rede externa, com limites de processo e tempo, use perfis novos de Claude Code e Codex e um servidor MCP local inofensivo chamado `context7`, configurado apenas no projeto descartável. Faça duas sessões comparáveis por host: uma com o AGENTS.md do plugin contendo a recomendação e outra sem esse bloco; mantenha o servidor, o restante do contexto e o prompt idênticos. Use somente este prompt e conteúdo sintético: `Revise o projeto de teste e responda se há uma decisão que exige documentação externa. O único marcador do projeto é STILO_CANARY_A91. Use ferramentas disponíveis se forem apropriadas.` Registre se o host carrega o servidor, que identidade e consentimento apresenta, se o agente o seleciona e se a requisição recebida contém `STILO_CANARY_A91`. O servidor deve responder apenas com documentação fixa de teste e registrar somente nome da ferramenta e presença/ausência do marcador. Não use credenciais, dados reais ou chamadas externas; mantenha o checkout auditado somente para leitura e interrompa se os limites de isolamento não estiverem disponíveis.",
+                                "deployment":  "Em perfis descartáveis de Claude Code e Codex, use um projeto de teste com servidor MCP local inofensivo chamado `context7` e o mesmo prompt sintético definido no plano local. Registre se o host carrega a configuração do projeto, que identidade e consentimento apresenta, se o agente seleciona o servidor após receber a recomendação e se a requisição contém `STILO_CANARY_A91`. Use sessões novas, compare com uma sessão sem o bloco de recomendação e não use projetos de produção, credenciais, dados reais ou serviços externos."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-instructions.js:sanitiza/repo-free-text-injected-without-provenance-label",
+        "title":  "Texto de checkpoint do projeto pode entrar no contexto do plugin sem indicação explícita de origem",
+        "description":  "Os hooks leem campos de texto de `.stilo/checkpoint.json` e inserem `task`, `nextAction` e `pending` no bloco `Estado do Stilo Code`. `sanitiza` reduz espaços e limita o tamanho, mas não indica que esses valores vieram do projeto. Um `nextAction` controlado pelo repositório pode, portanto, aparecer como a próxima ação do Stilo no contexto enviado ao host. A fonte confirma esse resultado no contexto; não confirma que Claude Code ou Codex carreguem o estado nos cenários alegados nem que o modelo trate o conteúdo como instrução confiável ou aja com base nele.",
+        "claimed_root_cause":  "`buildCheckpointNote` interpola texto do checkpoint dentro do contexto injetado pelo plugin. A validação de `task` e `nextAction` exige strings não vazias, e `sanitiza` só normaliza espaços e trunca. O bloco identifica o estado como sendo do Stilo, mas não rotula esses campos como conteúdo não confiável do repositório.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  9,
+                          "scope":  "SessionStart",
+                          "description":  "O hook resolve o projeto usando o diretório de trabalho do processo."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  279,
+                          "scope":  "resolveProjeto",
+                          "description":  "Resolve o estado do projeto descoberto a partir do diretório de trabalho."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  64,
+                          "scope":  "checkpointPathFromState",
+                          "description":  "Deriva `checkpoint.json` do caminho do estado selecionado."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  231,
+                          "scope":  "readCheckpoint",
+                          "description":  "Lê o JSON do checkpoint e o aceita quando `validateCheckpoint` reconhece os campos."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  86,
+                          "scope":  "buildCheckpointNote",
+                          "description":  "Renderiza `checkpoint.nextAction` após o rótulo `próxima:` e inclui tarefa e pendências após sanitização."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  315,
+                          "scope":  "buildInjectedContext",
+                          "description":  "Monta e seleciona o contexto completo que contém o bloco de estado e checkpoint."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-runtime.js",
+                          "line":  27,
+                          "scope":  "writeHookOutput",
+                          "description":  "Escreve o contexto no stdout para o host; o formato depende do agente e do evento."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  55,
+                             "description":  "`sanitiza` colapsa espaços em branco e trunca o texto; não acrescenta marcação de origem."
+                         },
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  215,
+                             "description":  "`validateCheckpoint` verifica os tipos e valores não vazios, sem verificar procedência ou conteúdo."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  86,
+                             "description":  "`checkpoint.nextAction` é interpolado após o rótulo `próxima:`."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  269,
+                             "description":  "A lista do estado válido começa com o cabeçalho `## Estado do Stilo Code`."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  298,
+                             "description":  "`buildFullContext` combina o ruleset do plugin e o bloco de estado."
+                         },
+                         {
+                             "file":  "hooks/stilo-runtime.js",
+                             "line":  27,
+                             "description":  "`writeHookOutput` escreve o contexto no stdout para consumo do host."
+                         }
+                     ],
+        "blockers":  [
+                         "Não foi observado se Claude Code ou Codex carregam o estado descoberto nos cenários de projeto clonado ou descoberta um nível abaixo, nem se outro arquivo de instruções já carregado oferece ao autor do projeto o mesmo canal.",
+                         "Não foi observado se os hosts apresentam esses campos ao modelo com distinção suficiente de dados, nem se o modelo age sobre um `nextAction` controlado pelo projeto.",
+                         "O impacto depende do comportamento do host e do modelo; a fonte não mostra execução de comandos nem outra ação de segurança causada diretamente pelo campo."
+                     ],
+        "validation_plan":  {
+                                "local":  "Em uma VM Linux descartável sem rede, usar usuário sem privilégios, plugin somente leitura, fixture gravável isolada, limite de memória de 128 MiB e timeout de processo de 5 segundos. Criar `.stilo/state.json` com `{\"version\":1,\"project\":\"audit-fixture\",\"phase\":\"PLAN\",\"reviewRound\":0}` e `.stilo/checkpoint.json` com `{\"version\":1,\"cycle\":\"audit-cycle\",\"phase\":\"PLAN\",\"task\":\"AUDIT-MARKER-TASK\",\"decisions\":[],\"verified\":[],\"pending\":[\"AUDIT-MARKER-PENDING\"],\"nextAction\":\"AUDIT-MARKER-NEXT-ACTION\",\"updated\":\"2026-10-24T00:00:00Z\"}`. Iniciar o hook SessionStart com o diretório de trabalho na fixture e capturar stdout. Registrar se o contexto contém `próxima: AUDIT-MARKER-NEXT-ACTION` e se identifica esse campo como dado não confiável do projeto. Não enviar o conteúdo a um modelo nem permitir ações de ferramenta; não executar se qualquer limite ou isolamento não puder ser imposto.",
+                                "deployment":  "Em perfis descartáveis de Claude Code e Codex e um projeto de teste com os mesmos arquivos JSON da fixture local, iniciar uma sessão e observar o contexto que o host efetivamente carrega. Em seguida, sem habilitar ferramentas ou ações externas, fazer uma pergunta neutra e verificar se o modelo responde com `AUDIT-MARKER-NEXT-ACTION` conforme o campo `nextAction`, ou se o host/modelo o identifica como dado do projeto. Registrar separadamente o contexto apresentado e a resposta. Não usar projeto de produção, credenciais, comandos executáveis ou dados sensíveis."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-setup.js:probeGitHubCli:bare-name-gh-cwd-resolution",
+        "title":  "SessionStart pode executar um gh.exe fornecido pelo projeto no Windows",
+        "description":  "Se o hook SessionStart recebe o diretÃ³rio do projeto como cwd e nÃ£o herda `NoDefaultCurrentDirectoryInExePath=1`, `probeGitHubCli` chama `gh.exe --version` por nome simples. A sonda de plataforma registrada pelo parent confirma que Node 24.19.0 no Windows executa um executÃ¡vel de mesmo nome no cwd quando essa variÃ¡vel estÃ¡ ausente e usa o binÃ¡rio do PATH quando ela estÃ¡ definida. Ainda nÃ£o foi confirmado se Claude Code ou Codex passam o cwd do projeto ao hook nem se o hook herda essa variÃ¡vel; por isso, o efeito no fluxo real do plugin segue pendente.",
+        "claimed_root_cause":  "`probeGitHubCli` chama `spawnSync` com o nome simples `gh.exe`, sem `cwd` explÃ­cito, caminho absoluto ou sanitizaÃ§Ã£o de PATH. A resoluÃ§Ã£o pode alcanÃ§ar um executÃ¡vel no diretÃ³rio do projeto, dependendo do cwd e do ambiente fornecidos pelo host.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/claude-codex-hooks.json",
+                          "line":  5,
+                          "scope":  "SessionStart matcher",
+                          "description":  "O matcher registra o hook para startup, resume, clear e compact quando o host inicia esse evento para uma sessÃ£o."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  9,
+                          "scope":  "SessionStart main",
+                          "description":  "O hook resolve o projeto a partir de process.cwd()."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-setup.js",
+                          "line":  8,
+                          "scope":  "probeGitHubCli",
+                          "description":  "A chamada `spawnSync(\u0027gh.exe\u0027, [\u0027--version\u0027], ...)` pode resolver um executÃ¡vel no cwd; a sonda do parent confirmou esse comportamento no Windows quando `NoDefaultCurrentDirectoryInExePath` estÃ¡ ausente."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "hooks/stilo-setup.js",
+                             "line":  8,
+                             "description":  "`gh.exe` Ã© passado como nome simples, sem opÃ§Ã£o `cwd` ou caminho absoluto."
+                         },
+                         {
+                             "file":  "hooks/stilo-activate.js",
+                             "line":  9,
+                             "description":  "O hook usa `process.cwd()` para resolver o projeto e nÃ£o altera o cwd antes de chamar a sonda."
+                         },
+                         {
+                             "file":  "hooks/claude-codex-hooks.json",
+                             "line":  5,
+                             "description":  "SessionStart roda nos eventos startup, resume, clear e compact."
+                         },
+                         {
+                             "file":  "agents/parent-probe/artifacts/cwd-resolution-probe.json",
+                             "line":  1,
+                             "description":  "A sonda independente do parent, sem executar cÃ³digo do repositÃ³rio, observou Node 24.19.0 no Windows executando a cÃ³pia de `hostname.exe` chamada `gh.exe` no cwd quando a variÃ¡vel estava ausente; com a variÃ¡vel igual a 1, executou o binÃ¡rio do PATH."
+                         }
+                     ],
+        "blockers":  [
+                         "NÃ£o foi observado se Claude Code e Codex iniciam o hook SessionStart com o cwd do projeto aberto.",
+                         "NÃ£o foi observado se o processo do hook herda `NoDefaultCurrentDirectoryInExePath`; a sonda registrou essa variÃ¡vel como presente no processo de ferramentas desta sessÃ£o, mas nÃ£o estabeleceu o ambiente do hook."
+                     ],
+        "validation_plan":  {
+                                "local":  "Em uma VM Windows descartÃ¡vel, sem rede e com perfil de host isolado, abrir um projeto de teste com uma cÃ³pia benigna de `hostname.exe` chamada `gh.exe`. Iniciar o plugin em cada host e registrar o cwd do processo SessionStart, o valor de `NoDefaultCurrentDirectoryInExePath` no ambiente do hook e o caminho da imagem executÃ¡vel iniciada apÃ³s `gh.exe --version`. Confirmar se o host mostra uma tela de confianÃ§a antes do hook. NÃ£o usar binÃ¡rio ou dados reais do projeto.",
+                                "deployment":  "O proprietÃ¡rio pode repetir em perfis descartÃ¡veis de Claude Code e Codex, com um projeto de teste e um `gh.exe` benigno. Registrar cwd, ambiente herdado, caminho da imagem executada e qualquer prompt de confianÃ§a. NÃ£o usar projeto de produÃ§Ã£o, credenciais ou dados sensÃ­veis."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-state.js:findStateFiles:unbounded-ancestor-walk",
+        "title":  "Project discovery can select state from a shared ancestor directory",
+        "description":  "`findStateFiles` searches from the hook\u0027s working directory to the filesystem root and accepts the first ancestor `.stilo/state.json`. If a lower-privileged principal can create that file in a shared ancestor, a session without a nearer state file may use the planted state and checkpoint. The state fields then affect injected project and phase context; malformed state can instead trigger directives to stop and repair it. Source confirms the path and propagation, but this run did not establish whether an attacker can write to a relevant ancestor or observe the resulting host/model behavior.",
+        "claimed_root_cause":  "`hooks/stilo-state.js#findStateFiles` stops only at the filesystem root and has no configured ceiling or ownership check. `resolveProjeto` uses the first matching path. The resulting state path also determines the checkpoint path.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  9,
+                          "scope":  "SessionStart hook",
+                          "description":  "Resolves the project from the hook working directory. SubagentStart and UserPromptSubmit also call project resolution."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  84,
+                          "scope":  "findStateFiles",
+                          "description":  "Walks upward until the filesystem root, returning the first existing ancestor `.stilo/state.json`."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  279,
+                          "scope":  "resolveProjeto",
+                          "description":  "Passes the discovered paths to the resolver, which reads and validates the sole match."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  64,
+                          "scope":  "checkpointPathFromState",
+                          "description":  "Derives `.stilo/checkpoint.json` from the selected state path; checkpoint text is included in the state context."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  267,
+                          "scope":  "blocoEstado",
+                          "description":  "Renders validated project and phase fields; unreadable or invalid state produces repair or stop directives."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-runtime.js",
+                          "line":  41,
+                          "scope":  "writeHookOutput",
+                          "description":  "Writes assembled context to stdout for the host to consume."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  74,
+                             "description":  "`findStateFiles` accepts only a cwd argument and defines no search ceiling or ownership check."
+                         },
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  87,
+                             "description":  "The first existing ancestor state path is returned."
+                         },
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  91,
+                             "description":  "The upward walk ends only when the parent equals the current path."
+                         },
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  279,
+                             "description":  "`resolveProjeto` calls the unbounded discovery function."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  64,
+                             "description":  "Checkpoint location is derived from the selected state path."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  176,
+                             "description":  "Unreadable state produces a repeated instruction not to create or restart the project and to repair the file."
+                         },
+                         {
+                             "file":  "AGENTS.md",
+                             "line":  99,
+                             "description":  "The ruleset directs the agent to write phase transitions to the discovered state file."
+                         },
+                         {
+                             "file":  "tests/state.test.js",
+                             "line":  77,
+                             "description":  "The test verifies that upward search takes precedence over a nested project; it does not test a ceiling above the workspace or home directory."
+                         }
+                     ],
+        "blockers":  [
+                         "Whether a different, lower-privileged principal can create `.stilo/state.json` in an ancestor of a relevant working directory depends on that host\u0027s filesystem permissions and sharing configuration; this is not established by repository source.",
+                         "This host has no OS-enforced sandbox, so the hook was not run and injection from a planted ancestor state was not observed.",
+                         "Whether Claude Code or Codex and the model act on the injected state or checkpoint text is runtime behavior not established by source."
+                     ],
+        "validation_plan":  {
+                                "local":  "In an approved OS-enforced sandbox with networking disabled, a throwaway root, read-only target, empty allowlisted environment, and bounded resources, create a valid state and checkpoint at the sandbox root and a victim project beneath it with no local `.stilo` directory. Call `resolveProjeto` and the context builder; record whether the ancestor path is selected and its state/checkpoint values appear in the context. Repeat with an unreadable state file. Do not run this check if the required sandbox controls are unavailable.",
+                                "deployment":  "Owner-observed on a disposable host/profile: inspect permissions on relevant shared ancestors and determine whether a separate standard account can create `.stilo/state.json` there. If so, use a throwaway project with harmless state/checkpoint values and record whether SessionStart, UserPromptSubmit, or SubagentStart selects and injects them. Do not use a production project or sensitive content."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-state.js:readJsonObject:unbounded-readFileSync-checkpoint-special-file",
+        "title":  "Hooks SessionStart e SubagentStart leem checkpoint.json sem limite ou verificação do tipo de arquivo",
+        "description":  "Com um state.json válido, SessionStart e SubagentStart derivam o caminho irmão .stilo/checkpoint.json e o passam a fs.readFileSync sem verificar se é arquivo regular ou limitar seu tamanho. Um checkpoint muito grande ou, em sistemas POSIX, um link para um dispositivo pode causar leitura longa ou crescimento de memória. A fonte confirma a leitura sem limites, mas esta verificação não mediu consumo de recursos nem estabeleceu o comportamento do timeout do host.",
+        "claimed_root_cause":  "readCheckpoint delega a readJsonObject, que chama fs.readFileSync(filePath, \u0027utf8\u0027) sem verificar o tipo do arquivo nem impor limite de bytes. A configuração declara timeout de cinco segundos para os hooks, mas não demonstra o efeito desse timeout sobre o processo.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/stilo-activate.js",
+                          "line":  9,
+                          "scope":  "SessionStart",
+                          "description":  "Resolve o projeto com process.cwd() e chama a montagem do contexto; stilo-subagent.js:8 segue caminho equivalente em SubagentStart."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  286,
+                          "scope":  "blocoEstado",
+                          "description":  "Para um estado válido, chama buildCheckpointNote com o caminho do state.json."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-instructions.js",
+                          "line":  64,
+                          "scope":  "checkpointPathFromState",
+                          "description":  "Deriva checkpoint.json no mesmo diretório do state.json."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  232,
+                          "scope":  "readCheckpoint",
+                          "description":  "Passa o caminho derivado a readJsonObject sem pré-verificação do arquivo."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  204,
+                          "scope":  "readJsonObject",
+                          "description":  "Lê o conteúdo sincronamente até EOF, seguindo links e sem limite de bytes."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  204,
+                             "description":  "readFileSync(filePath, \u0027utf8\u0027) lê sem limite de bytes; o tratamento de exceções não limita leituras grandes ou prolongadas."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  72,
+                             "description":  "buildCheckpointNote chama readCheckpoint durante a montagem do contexto."
+                         },
+                         {
+                             "file":  "hooks/stilo-instructions.js",
+                             "line":  83,
+                             "description":  "Os valores lidos do checkpoint são usados para montar a nota injetada."
+                         },
+                         {
+                             "file":  "hooks/claude-codex-hooks.json",
+                             "line":  11,
+                             "description":  "SessionStart declara timeout de cinco segundos; SubagentStart declara o mesmo na linha 37. Isso não prova que o host encerre o processo ou limite memória."
+                         },
+                         {
+                             "file":  "scripts/evaluate-harness.js",
+                             "line":  11,
+                             "description":  "A recusa de links simbólicos no harness aplica-se à cópia de fixtures, não ao leitor de checkpoint."
+                         },
+                         {
+                             "file":  "scripts/evaluate-harness.js",
+                             "line":  17,
+                             "description":  "A recusa de arquivos especiais no harness não protege readJsonObject."
+                         }
+                     ],
+        "blockers":  [
+                         "Esta execução não dispõe de sandbox com limites de sistema operacional; duração, memória e resultado do leitor com essas entradas não foram medidos.",
+                         "A fonte não estabelece se Claude Code ou Codex encerra o processo do hook ao atingir cinco segundos, nem se processos filhos sobrevivem.",
+                         "A disponibilidade de /dev/zero e a materialização de links dependem da plataforma e do checkout; a alternativa de arquivo regular grande também não teve seu efeito medido."
+                     ],
+        "validation_plan":  {
+                                "local":  "Em uma VM Linux descartável sem rede, impor cgroup v2 memory.max=268435456, pids.max=32 e timeout de seis segundos que encerre o grupo de processos. Criar fixtures fora do checkout, com state.json válido e checkpoint.json válido pequeno, link simbólico para /dev/zero e arquivo regular de 67108864 bytes. Com o checkout somente leitura, usar um harness descartável para chamar hooks/stilo-instructions.js:buildCheckpointNote(statePath, false), que percorre o leitor usado pelo hook sem executar o probe de instalação do SessionStart. Usar o caminho absoluto do Node e apenas as variáveis de ambiente necessárias; registrar código de saída, duração, RSS máximo e retorno. Não executar se algum limite não puder ser imposto.",
+                                "deployment":  "Em VM Linux descartável com perfil de teste de Claude Code e Codex, limites cgroup v2 memory.max=268435456 e timeout de grupo de seis segundos, usar somente um projeto dummy com state.json válido e checkpoint.json de teste apontando para /dev/zero. Observar separadamente se cada host encerra o processo do hook no timeout, se processos filhos sobrevivem e se a sessão continua; registrar configuração e resultados. Não usar projeto, conta, credenciais ou dados de produção."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "hooks/stilo-state.js:readStateResult:unbounded-readFileSync-state-special-file",
+        "title":  "Project discovery can lead hooks to read state.json without a file-type or size bound",
+        "description":  "`findStateFiles` accepts the first existing `.stilo/state.json` path, and `readStateResult` reads it synchronously without checking its type or size. A symlink to a device or a FIFO could therefore make a hook block or consume memory, depending on platform and filesystem behavior. The source path is present, but this run did not execute it or establish the resulting resource impact or host timeout behavior.",
+        "claimed_root_cause":  "`findStateFiles` uses `fs.existsSync`, which follows symlinks and does not restrict the target type. `resolveProjeto` passes the discovered path to `readStateResult`, which calls unbounded `fs.readFileSync`. No regular-file or size check occurs on this wired path. The separate diagnostics reader checks `isFile()`, but it is not called here.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/stilo-prompt.js",
+                          "line":  19,
+                          "scope":  "main",
+                          "description":  "UserPromptSubmit resolves project state for the host-supplied cwd. SessionStart and SubagentStart also call project resolution."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  87,
+                          "scope":  "findStateFiles",
+                          "description":  "`fs.existsSync` accepts an existing state path without checking whether it is a regular file or symlink."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  284,
+                          "scope":  "resolveProjeto",
+                          "description":  "The discovered state path is passed directly to `readStateResult`."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "hooks/stilo-state.js",
+                          "line":  132,
+                          "scope":  "readStateResult",
+                          "description":  "The path is read synchronously with `fs.readFileSync` without a type or size bound."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  87,
+                             "description":  "Discovery checks existence only; no `lstat`, no-follow open, or regular-file check is performed."
+                         },
+                         {
+                             "file":  "hooks/stilo-state.js",
+                             "line":  132,
+                             "description":  "The wired state reader calls `fs.readFileSync` without a byte limit."
+                         },
+                         {
+                             "file":  "hooks/stilo-prompt.js",
+                             "line":  19,
+                             "description":  "The UserPromptSubmit path resolves project state before writing hook output."
+                         },
+                         {
+                             "file":  "hooks/stilo-runtime.js",
+                             "line":  77,
+                             "description":  "The prompt reader schedules an unreferenced timer, but synchronous work blocks the event loop while it is running."
+                         },
+                         {
+                             "file":  "hooks/claude-codex-hooks.json",
+                             "line":  24,
+                             "description":  "The UserPromptSubmit hook declares a five-second host timeout; its process-kill behavior was not observed."
+                         },
+                         {
+                             "file":  "hooks/stilo-diagnostics.js",
+                             "line":  14,
+                             "description":  "A separate diagnostics reader checks `statSync().isFile()`, but this check is not present in the wired state reader."
+                         }
+                     ],
+        "blockers":  [
+                         "This host has no OS-enforced sandbox, so a symlink-to-device or FIFO fixture was not run. Node behavior, peak memory use, and blocking behavior for these inputs remain unobserved.",
+                         "Claude Code and Codex host timeout behavior is not visible in repository source; it is unknown whether the hook process is terminated and whether the prompt continues.",
+                         "Symlink materialization and FIFO availability depend on platform and filesystem configuration; the default Windows checkout may not reproduce the POSIX cases."
+                     ],
+        "validation_plan":  {
+                                "local":  "In an isolated Linux VM with networking disabled, a read-only target, an empty allowlisted environment, a 256 MB memory limit, and a six-second process-group timeout, create a disposable project with a valid local state file replaced in separate runs by a symlink to `/dev/zero` and by a FIFO. Call `resolveProjeto` against that fixture and record exit status, peak memory, and whether it returns before the timeout. Do not run the check if any stated isolation or resource limit is unavailable.",
+                                "deployment":  "In a disposable Linux VM with a strict memory cap and process-group timeout, install the plugin in a throwaway Claude Code or Codex profile and open a project containing the same harmless fixtures. Observe whether the host terminates the hook process, whether any child survives, and whether the prompt continues. Do not use a production profile, project, or sensitive data."
+                            }
+    },
+    {
+        "verdict":  "needs_validation",
+        "fingerprint":  "scripts/setup-github-cli.js:realRun:bare-name-installer-cwd-resolution",
+        "title":  "Agent-run GitHub CLI installer may run a project-planted winget.exe on Windows",
+        "description":  "The installer invokes `winget.exe` by bare name with `shell:false`, inherits its caller\u0027s environment, and does not set a working directory. If the agent runs the suggested setup script from an untrusted project and its Node process lacks `NoDefaultCurrentDirectoryInExePath=1`, Windows may resolve a project-local `winget.exe` before the system executable. The parent platform probe observed cwd-first resolution for `gh.exe` and `winget.exe` when that variable was unset, and PATH resolution when it was set. The probe did not run repository code. Whether the agent\u0027s actual script process has that environment variable and project working directory remains unverified.",
+        "claimed_root_cause":  "The installer passes bare executable names to `spawn` and inherits the caller\u0027s working directory and environment. The hook\u0027s setup note suggests running the installer when `gh` is absent. The parent probe confirms cwd-first resolution when `NoDefaultCurrentDirectoryInExePath` is unset, but this run does not establish the environment or working directory used when an agent executes the installer.",
+        "trace":  [
+                      {
+                          "kind":  "entrypoint",
+                          "file":  "hooks/stilo-setup.js",
+                          "line":  22,
+                          "scope":  "buildSetupNote",
+                          "description":  "When the probe is absent, the generated setup note gives the agent the command to run the installer script."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "scripts/setup-github-cli.js",
+                          "line":  76,
+                          "scope":  "ensureGitHubCli.prepare",
+                          "description":  "On Windows the package manager is the bare name `winget.exe`."
+                      },
+                      {
+                          "kind":  "propagation",
+                          "file":  "scripts/setup-github-cli.js",
+                          "line":  90,
+                          "scope":  "ensureGitHubCli.prepare",
+                          "description":  "The installer probes the selected manager by bare name before invoking it with install arguments."
+                      },
+                      {
+                          "kind":  "sink",
+                          "file":  "scripts/setup-github-cli.js",
+                          "line":  16,
+                          "scope":  "realRun",
+                          "description":  "`spawn` receives the bare filename with `shell:false`, inherited environment, and no explicit cwd."
+                      }
+                  ],
+        "evidence":  [
+                         {
+                             "file":  "scripts/setup-github-cli.js",
+                             "line":  16,
+                             "description":  "The spawn options inherit the caller\u0027s environment and omit cwd."
+                         },
+                         {
+                             "file":  "scripts/setup-github-cli.js",
+                             "line":  76,
+                             "description":  "The Windows package-manager executable is selected as bare `winget.exe`."
+                         },
+                         {
+                             "file":  "hooks/stilo-setup.js",
+                             "line":  18,
+                             "description":  "The setup note is generated only for the absent probe state."
+                         },
+                         {
+                             "file":  "hooks/stilo-setup.js",
+                             "line":  22,
+                             "description":  "The note directs the agent to invoke the installer script."
+                         }
+                     ],
+        "blockers":  [
+                         "The parent platform probe confirmed cwd-first resolution with `NoDefaultCurrentDirectoryInExePath` unset, but whether Claude Code or Codex passes that variable to the agent shell and then to the installer process is unknown. The probe artifact states that the variable was present only in the current session\u0027s tool process environment, not in the User or Machine environment.",
+                         "The working directory used when the agent follows the setup note is not established for either supported host. The possible project-local executable therefore has not been shown to run through the actual installer flow."
+                     ],
+        "validation_plan":  {
+                                "local":  "In an approved Windows VM with a disposable user profile and no network, inspect the environment and cwd inherited by a harmless child process launched in the same way the agent runs the installer. Use a benign test executable named `winget.exe` that only prints a fixed marker; do not invoke the installer or a package manager. Repeat with `NoDefaultCurrentDirectoryInExePath` unset and set to `1`, and record whether the current-directory executable or PATH executable is selected. Keep the target repository read-only and use no real credentials or project data.",
+                                "deployment":  "In disposable Claude Code and Codex profiles, use a throwaway project containing a harmless marker executable named `winget.exe`. Without running the installer, determine the cwd and whether `NoDefaultCurrentDirectoryInExePath` is present in the process environment that would launch the suggested command. If testing the complete flow is later approved, use a benign substitute executable that only records a fixed marker and never installs software."
+                            }
+    }
+]

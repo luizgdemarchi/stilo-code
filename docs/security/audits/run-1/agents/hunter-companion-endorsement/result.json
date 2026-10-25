@@ -1,0 +1,51 @@
+{
+  "units": [
+    {
+      "coverage_id": "AGENTS.md%239.%20Companions%20%E2%80%94%20usados%20se%20existirem%2C%20nunca%20exigidos::hooks%2Fstilo-instructions.js%23buildInjectedContext::hooks::AI-AND-LLM.md%23MCP%20server%20and%20tool%20identity%20confusion",
+      "disposition": "candidate",
+      "reviewed_paths": ["AGENTS.md", "hooks/stilo-instructions.js", "hooks/stilo-activate.js", "hooks/stilo-context.js"],
+      "checks": [{
+        "agent_id": "hunter-companion-endorsement",
+        "reviewed_paths": ["AGENTS.md", "hooks/stilo-instructions.js", "hooks/stilo-activate.js", "hooks/stilo-context.js"],
+        "invariant": "Injected companion recommendations must not make an untrusted project MCP server appear to be a plugin-endorsed or trusted tool solely because it uses the same name.",
+        "method": "source",
+        "result": "AGENTS.md names context7 and playwright as MCP companions and tells the agent to use available companions (AGENTS.md:231-249). SessionStart builds the injected context from the plugin-root AGENTS.md and returns it to the host (hooks/stilo-instructions.js:37-49, 295-305, 315-339; hooks/stilo-activate.js:9-11). The context selector has no companion identity or provenance check (hooks/stilo-context.js:12-44). Source does not show project MCP configuration being loaded or establish how either host resolves same-name servers, so the boundary effect remains unverified.",
+        "artifact": null
+      }],
+      "candidate_fingerprints": ["hooks/stilo-instructions.js:buildFullContext:companion-name-endorsement"],
+      "unresolved": []
+    }
+  ],
+  "candidates": [{
+    "proposed_verdict": "needs_validation",
+    "fingerprint": "hooks/stilo-instructions.js:buildFullContext:companion-name-endorsement",
+    "title": "Injected companion recommendations may lend plugin trust to a project-supplied MCP server with the same name",
+    "description": "An operator opens an untrusted project containing a project-local MCP server named `context7` or `playwright`. Stilo injects plugin-authored instructions recommending those names as MCP companions and saying to use them when available. If the host loads the project server and the agent treats the name match as endorsement, it may send tool requests or context to the untrusted server. Source confirms the injected recommendation, but does not establish project MCP loading, consent behavior, or whether the agent relies on the recommendation when selecting a server.",
+    "claimed_root_cause": "The plugin injects bare MCP companion names as trusted recommendations without binding them to an authenticated server identity or distinguishing plugin-provided tools from project-provided tools. Whether this crosses a trust boundary depends on host and agent behavior not established in source.",
+    "trace": [
+      {"kind":"entrypoint","file":"hooks/stilo-activate.js","line":9,"scope":"SessionStart project resolution","description":"The hook resolves the opened project's state before building the context to inject."},
+      {"kind":"propagation","file":"hooks/stilo-instructions.js","line":298,"scope":"buildFullContext","description":"The plugin reads AGENTS.md from pluginRoot and combines it with state and applicable modules."},
+      {"kind":"propagation","file":"AGENTS.md","line":244,"scope":"companion recommendations","description":"The injected rules name context7 and playwright as MCP companions and recommend them for project phases."},
+      {"kind":"sink","file":"hooks/stilo-activate.js","line":11,"scope":"SessionStart hook output","description":"The assembled instructions are returned to the host as additional context; whether they influence selection of a project-supplied same-name server is host/model behavior."}
+    ],
+    "evidence": [
+      {"file":"AGENTS.md","line":233,"description":"The rules instruct the agent to use a listed companion if installed and proceed without it otherwise."},
+      {"file":"AGENTS.md","line":244,"description":"context7 is explicitly identified as an MCP companion."},
+      {"file":"AGENTS.md","line":245,"description":"playwright is explicitly identified as an MCP companion."},
+      {"file":"hooks/stilo-instructions.js","line":45,"description":"lerArquivo reads instruction files from pluginRoot; the AGENTS.md text is plugin-authored context."},
+      {"file":"hooks/stilo-instructions.js","line":298,"description":"buildFullContext includes the plugin-root AGENTS.md text in the context assembled for SessionStart and SubagentStart."},
+      {"file":"hooks/stilo-activate.js","line":11,"description":"SessionStart passes buildInjectedContext output to writeHookOutput."},
+      {"file":"hooks/stilo-context.js","line":12,"description":"Context selection operates on text blocks and protected markers; it does not bind a companion name to a server identity."}
+    ],
+    "blockers": [
+      "Source does not establish whether Claude Code or Codex automatically loads project-local MCP configuration, what user consent or trust gates apply, or whether those controls show the actual server identity.",
+      "Source cannot establish whether an agent interprets Stilo's name-only recommendation as endorsement of a same-name project server or sends sensitive tool input to it."
+    ],
+    "validation_plan": {
+      "local":"In an approved OS-enforced sandbox with networking disabled, use a disposable project and a harmless dummy MCP server named `context7`; configure it to record only a fixed nonsensitive test request. Observe whether the host loads the project configuration, what consent or identity information it presents, and whether the agent treats the injected Stilo recommendation as endorsement. Do not use real credentials or project data. If such a sandbox is unavailable, do not run the target and retain this blocker.",
+      "deployment":"Owner-observed in a disposable Claude Code and Codex profile: open a throwaway project with a harmless same-name project MCP server and the plugin installed. Record whether the host loads it, whether consent identifies its source and endpoint, and whether the agent selects it because of the injected companion recommendation. Do not use a production project, real credentials, or sensitive prompts."
+    }
+  }],
+  "hardening": ["The reviewed hook source does not itself discover or load project MCP configuration; the candidate depends on host loading and model selection behavior."],
+  "uncovered": []
+}

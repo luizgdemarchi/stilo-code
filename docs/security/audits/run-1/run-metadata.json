@@ -1,0 +1,63 @@
+{
+    "run_id":  "stilo-code-run-1",
+    "repo":  "stilo-code",
+    "target":  "C:/Users/luizg/Documents/claude code/stilo-code",
+    "source_ref":  {
+                       "commit":  "6f014387f797ab32c336be662dcd260a23e64b68",
+                       "dirty":  false
+                   },
+    "profile":  "standard",
+    "scope_paths":  [
+                        "."
+                    ],
+    "budget":  null,
+    "execution_policy":  "sandboxed-source-and-local-only",
+    "sandbox_capability":  "unavailable: host has no OS-enforced sandbox (no Windows Sandbox, WSL, Docker or Podman); target-controlled code is not executed; decisive runtime facts become needs_validation",
+    "companion_files":  [
+                            "AI-AND-LLM.md",
+                            "DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+                            "SUPPLY-CHAIN-AND-RELEASE.md",
+                            "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md"
+                        ],
+    "prior_runs":  [
+
+                   ],
+    "shared_file_owners":  {
+                               "run-metadata.json":  "parent",
+                               "architecture.md":  "parent",
+                               "coverage-ledger.json":  "parent",
+                               "findings.json":  "parent",
+                               "REPORT.md":  "parent",
+                               "FINDINGS-DETAIL.md":  "parent",
+                               "NEEDS-VALIDATION.md":  "parent"
+                           },
+    "run_status":  "complete",
+    "validator_invocation":  "parent-validate.cjs: the skill CLIs reject all input on Windows (no O_NOFOLLOW/O_NONBLOCK); the parent wrapper reads parent-authored run files (lstat regular file, no symlink, \u003c=5 MiB, strict UTF-8) and calls the exported validateDocument of each validator",
+    "agent_contracts":  [
+                            {
+                                "role":  "reconnaissance 1a-1d",
+                                "classification":  "source mapping, ordinary logic",
+                                "model_requested":  "sonnet",
+                                "effort_requested":  "agent default",
+                                "application_confirmed":  "not reported by the tool"
+                            },
+                            {
+                                "role":  "hunters wave 1 (8)",
+                                "classification":  "security",
+                                "model_requested":  "opus",
+                                "effort_requested":  "high",
+                                "application_confirmed":  "not reported by the tool"
+                            }
+                        ],
+    "agent_invocations":  {
+                              "reconnaissance":  4,
+                              "hunters":  13,
+                              "critics":  5,
+                              "hunter_reemission":  1,
+                              "phase3_verifiers":  8,
+                              "phase5_verifiers":  8,
+                              "phase5_material_rechecks":  1
+                          },
+    "resume_from":  "1) add critic-wave3 missing unit (agents/critic-wave3/result.json) to the ledger and run one hunter for it (wave 4) plus a post-wave critic; 2) final-clean critic; 3) Phase 3: one fresh verifier per fingerprint in candidates-phase2.json (prompts via audit-verifier-prompts.js); 4) findings.json + parent-validate.cjs; 5) Phase 5 record verifiers; 6) REPORT.md, FINDINGS-DETAIL.md, NEEDS-VALIDATION.md",
+    "completion_summary":  "Phases 1-6 complete; 8 candidate fingerprints independently validated and 8 final records verified; 0 confirmed, 8 needs_validation; both coverage critics clean."
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "parent platform probe (no repository code executed)",
+  "host": {"os": "Windows 11 10.0.26200", "arch": "arm64", "node": "v24.19.0"},
+  "fixture": "empty scratch directory containing copies of C:\\Windows\\System32\\hostname.exe renamed gh.exe and winget.exe (sha256 prefix d5f1bf803eb3be5801f9, identical to hostname.exe); real gh 2.100.0 and winget v1.29.380 present on PATH",
+  "observations": [
+    {"env": "NoDefaultCurrentDirectoryInExePath unset", "call": "spawnSync('gh.exe',[],{shell:false})", "status": 0, "stdout": "BOOK-LSRPBMKDBJ", "meaning": "the cwd copy (hostname.exe) ran instead of the gh on PATH"},
+    {"env": "NoDefaultCurrentDirectoryInExePath unset", "call": "spawnSync('gh.exe',['--version'],{shell:false}) and spawnSync('winget.exe',['--version'],{shell:false})", "status": 1, "stdout": "", "meaning": "cwd copies ran (hostname rejects the argument); real binaries print versions with status 0"},
+    {"env": "NoDefaultCurrentDirectoryInExePath=1", "call": "spawnSync('gh.exe',['--version'],{shell:false}) and spawnSync('winget.exe',['--version'],{shell:false})", "status": 0, "stdout": "gh version 2.100.0 (2026-09-03) / v1.29.380", "meaning": "with the variable set, PATH binaries ran; the cwd copies were skipped"}
+  ],
+  "variable_origin": "NoDefaultCurrentDirectoryInExePath is absent from the User and Machine environment; it is present (=1) only in this Claude Code session's tool process environment. Whether hook processes inherit it is a host fact not observed here.",
+  "cleanup": "the renamed copies were deleted after the probe"
+}

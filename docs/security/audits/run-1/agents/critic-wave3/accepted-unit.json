@@ -1,0 +1,35 @@
+[
+    {
+        "refs":  {
+                     "surface":  "AGENTS.md#9. Companions — usados se existirem, nunca exigidos",
+                     "boundary":  "hooks/stilo-instructions.js#buildInjectedContext",
+                     "subsystem":  "hooks",
+                     "attack_class":  "AI-AND-LLM.md#MCP server and tool identity confusion"
+                 },
+        "labels":  {
+                       "surface":  "injected companion endorsements",
+                       "boundary":  "repository-controlled companion discovery and plugin endorsement",
+                       "subsystem":  "hooks",
+                       "attack_class":  "MCP server and tool identity confusion"
+                   },
+        "starting":  [
+                         "AGENTS.md",
+                         "modules/auditoria.md",
+                         "hooks/stilo-instructions.js",
+                         "hooks/stilo-context.js",
+                         "modules/orquestracao.md"
+                     ],
+        "ordinary":  null,
+        "companions":  [
+                           "AI-AND-LLM.md#Core discipline",
+                           "AI-AND-LLM.md#MCP server and tool identity confusion",
+                           "AI-AND-LLM.md#Validation rules"
+                       ],
+        "excluded":  [
+
+                     ],
+        "wave":  4,
+        "agent":  "hunter-companion-endorsement",
+        "reason":  "critic-wave3 proposed missing coverage for repository-shipped companion names or MCP configuration receiving plugin endorsement"
+    }
+]

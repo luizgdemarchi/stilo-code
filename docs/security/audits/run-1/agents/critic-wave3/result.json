@@ -1,0 +1,20 @@
+{
+  "missing_units": [
+    {
+      "surface": "AGENTS.md#9. Companions — usados se existirem, nunca exigidos",
+      "boundary": "hooks/stilo-instructions.js#buildInjectedContext",
+      "subsystem": "hooks",
+      "attack_class": "AI-AND-LLM.md#MCP server and tool identity confusion",
+      "starting_paths": [
+        "AGENTS.md",
+        "modules/auditoria.md",
+        "hooks/stilo-instructions.js",
+        "hooks/stilo-context.js",
+        "modules/orquestracao.md"
+      ],
+      "reason": "companions (ponytail-audit, superpowers, context7, playwright) endorsed by bare name in injected plugin text; a repo-shipped skill or .mcp.json entry with a matching name may gain plugin endorsement"
+    }
+  ],
+  "reassign_ids": [],
+  "stop": false
+}

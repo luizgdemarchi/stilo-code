@@ -1,0 +1,60 @@
+[
+  {
+    "verifier": "verifier-01",
+    "fingerprint": "hooks/stilo-setup.js:probeGitHubCli:bare-name-gh-cwd-resolution",
+    "units": [
+      "hooks%2Fstilo-setup.js%23probeGitHubCli::hooks%2Fstilo-setup.js%23probeGitHubCli::hooks::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Install%2C%20update%2C%20and%20repair%20path%20trust"
+    ]
+  },
+  {
+    "verifier": "verifier-02",
+    "fingerprint": "scripts/setup-github-cli.js:realRun:bare-name-installer-cwd-resolution",
+    "units": [
+      "scripts%2Fsetup-github-cli.js%23ensureGitHubCli::scripts%2Fsetup-github-cli.js%23realRun::scripts::DESKTOP-MOBILE-AND-LOCAL-IPC.md%23Install%2C%20update%2C%20and%20repair%20path%20trust"
+    ]
+  },
+  {
+    "verifier": "verifier-03",
+    "fingerprint": "hooks/stilo-state.js:findStateFiles:unbounded-ancestor-walk",
+    "units": [
+      "hooks%2Fstilo-state.js%23findStateFiles::hooks%2Fstilo-state.js%23findStateFiles::hooks::ATTACK-CLASSES.md%23Resource%20and%20file%20handling"
+    ]
+  },
+  {
+    "verifier": "verifier-04",
+    "fingerprint": "hooks/stilo-instructions.js:sanitiza/repo-free-text-injected-without-provenance-label",
+    "units": [
+      "hooks%2Fstilo-instructions.js%23blocoEstado::hooks%2Fstilo-state.js%23readCheckpoint::hooks::AI-AND-LLM.md%23Persistent%20memory%20poisoning",
+      "hooks%2Fstilo-instructions.js%23buildCheckpointNote::hooks%2Fstilo-state.js%23validateCheckpoint::hooks::AI-AND-LLM.md%23Indirect%20injection%20through%20retrieved%20or%20ingested%20content",
+      "hooks%2Fstilo-state.js%23readStateResult::hooks%2Fstilo-instructions.js%23sanitiza::hooks::AI-AND-LLM.md%23Indirect%20injection%20through%20retrieved%20or%20ingested%20content"
+    ]
+  },
+  {
+    "verifier": "verifier-05",
+    "fingerprint": "hooks/stilo-state.js:readJsonObject:unbounded-readFileSync-checkpoint-special-file",
+    "units": [
+      "repository%23product-code::repository%23product-code::repository::ATTACK-CLASSES.md%23Wildcard"
+    ]
+  },
+  {
+    "verifier": "verifier-06",
+    "fingerprint": "hooks/stilo-state.js:readStateResult:unbounded-readFileSync-state-special-file",
+    "units": [
+      "hooks%2Fstilo-prompt.js%23main::hooks%2Fstilo-state.js%23readStateResult::hooks::ATTACK-CLASSES.md%23Resource%20and%20file%20handling"
+    ]
+  },
+  {
+    "verifier": "verifier-07",
+    "fingerprint": "hooks/stilo-instructions.js:blocoEstado:write-repair-directive-to-unverified-state-identity",
+    "units": [
+      "hooks%2Fstilo-instructions.js%23blocoEstado::hooks%2Fstilo-state.js%23findStateFiles::hooks::ATTACK-CLASSES.md%23Resource%20and%20file%20handling"
+    ]
+  },
+  {
+    "verifier": "verifier-08",
+    "fingerprint": "hooks/stilo-instructions.js:buildFullContext:companion-name-endorsement",
+    "units": [
+      "AGENTS.md%239.%20Companions%20%E2%80%94%20usados%20se%20existirem%2C%20nunca%20exigidos::hooks%2Fstilo-instructions.js%23buildInjectedContext::hooks::AI-AND-LLM.md%23MCP%20server%20and%20tool%20identity%20confusion"
+    ]
+  }
+]
