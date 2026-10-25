@@ -194,3 +194,17 @@ Este bloco substitui as próximas ações históricas acima.
 - Estado: `REVIEW`, `reviewRound: 17`. Pendentes: 2, 4, 5, 12, 14, 15, 17, 28–32, 36, 37,
   38, 45–47. Próxima ação: ciclo 2 — manter só Claude Code e Codex (usuário autorizou excluir
   o resto); depois audit completo de segurança com `~/.agents/skills/security-audit`.
+
+## Ciclo 2026-10-24 — apenas Claude Code e Codex (spec § 18)
+
+- Escopo e spec aprovados pelo usuário; plano `docs/superpowers/plans/2026-10-24-apenas-claude-codex-plan.md`.
+- Removidos: OpenCode, Qoder, Copilot, Gemini/Antigravity, Cursor, Windsurf, Cline, Kiro, os
+  6 adaptadores, `scripts/sync-adapters.js` e o caminho manual de colar o `AGENTS.md`.
+- Runtime só reconhece Codex (`PLUGIN_DATA`) e Claude Code; tipo `retirado` no diagnóstico;
+  critérios 8, 9 e 15 retirados; matriz com 54 critérios.
+- `review-18` (independente; modelo solicitado `opus`, esforço `xhigh`; ambiente informou
+  Opus 5.5, esforço não confirmado): 0 crítico, 0 alto, 1 médio, 5 baixo — todos corrigidos.
+- `npm.cmd test`: 128/128, 0 pulados. Estado: `REVIEW`, `reviewRound: 18`, 2026-10-25T00:51:41Z.
+- Pendentes vivos: 2, 4, 5, 12, 14, 17, 28–32, 36, 37, 38, 45–47. Próxima ação: audit completo
+  de segurança com `~/.agents/skills/security-audit` (perfil standard, só código-fonte; sem
+  sandbox de SO no host).

@@ -2,7 +2,8 @@
 
 Critérios locais têm verificação reproduzível no checkout. Critérios vivos exigem
 observação em agente instalado ou contexto independente suportado; sem essa evidência
-permanecem pendentes e o projeto não é declarado `DONE`.
+permanecem pendentes e o projeto não é declarado `DONE`. Critérios `retirado` dependiam de
+agente ou arquivo removido; o motivo fica no Resultado e eles não bloqueiam `DONE`.
 
 | Critério | Tarefa | Comando | Tipo | Resultado | Review |
 |---|---|---|---|---|---|
@@ -13,14 +14,14 @@ permanecem pendentes e o projeto não é declarado `DONE`.
 | 5 | T8 | concluir `SPEC` em conversa viva | pendente | pendente | review-04 |
 | 6 | T3 | `node --test tests/hooks.test.js` | local | testes automáticos | review-04 |
 | 7 | T7 | `node --test tests/manifestos.test.js` | local | atendido | review-04 |
-| 8 | T7 | `node scripts/sync-adapters.js --check` | local | atendido após sincronização | review-04 |
-| 9 | T7 | `node --test tests/manifestos.test.js` | local | atendido | review-04 |
+| 8 | T7 | `node scripts/sync-adapters.js --check` | retirado | adaptadores e script removidos com o suporte a outros agentes (spec § 18) | review-04, review-18 |
+| 9 | T7 | `node --test tests/manifestos.test.js` | retirado | caminho manual "colar o `AGENTS.md` num agente sem plugin" removido (spec § 18) | review-04, review-18 |
 | 10 | T7 | `npm.cmd test` sem companions | local | atendido quando a suíte passar | review-04 |
 | 11 | T7 | `node --test tests/instructions.test.js` | local | atendido | review-04 |
 | 12 | T8 | conversa viva em `EXECUTE` | pendente | pendente | review-04 |
 | 13 | T3 | estado legado com `enxuto` | local | override ignorado; testes | review-04 |
 | 14 | T8 | mensagem em inglês numa conversa viva | pendente | pendente | review-04 |
-| 15 | T6 | smoke test OpenCode | pendente | Não executado por dispensa do usuário; sem alegação de compatibilidade viva | review-06 |
+| 15 | T6 | smoke test OpenCode | retirado | Suporte removido com o OpenCode (spec § 18); nunca executado | review-06, review-18 |
 | 16 | T01 | inventário de manifestos, diretórios e testes | local | `tests/manifestos.test.js` | review-09 |
 | 17 | T02 | hooks em sessão nova e mensagem comum | pendente | pendente | review-09 |
 | 18 | T03 | teste de tamanho por fase | local | `tests/context.test.js` | review-09 |
@@ -38,8 +39,8 @@ permanecem pendentes e o projeto não é declarado `DONE`.
 | 30 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: `Aplicação confirmada: não informada pela ferramenta` é saída válida; seleção efetiva observada: pendente | review-16, review-17 |
 | 31 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: diagnóstico antes de escalar, uma escalada, falha de ambiente sem escalada; seleção efetiva observada: pendente | review-16, review-17 |
 | 32 | T01 | `node --test tests/orchestration.test.js` | pendente | contrato verificado localmente: fallback sem subagentes, sem controle de modelo e sem controle de esforço; seleção efetiva observada: pendente | review-16, review-17 |
-| 33 | T02 | `node --test tests/context.test.js tests/instructions.test.js` e `node scripts/sync-adapters.js --check` | local | política integral em PLAN/EXECUTE/REVIEW/FIX, compactada ou em fallback; 6 adaptadores em dia | review-16, review-17 |
-| 34 | T01/T02/T03 | `npm.cmd test` | local | 130 testes: 129 passados, 0 falhas, 1 pulado (smoke OpenCode opt-in), após integrar o ciclo de 2026-10-19 | review-16, review-17 |
+| 33 | T02 | `node --test tests/context.test.js tests/instructions.test.js` e `node scripts/sync-adapters.js --check` | local | política integral em PLAN/EXECUTE/REVIEW/FIX, compactada ou em fallback; 6 adaptadores em dia (adaptadores e sincronização retirados depois, no § 18) | review-16, review-17, review-18 |
+| 34 | T01/T02/T03 | `npm.cmd test` | local | 130 testes: 129 passados, 0 falhas, 1 pulado (smoke OpenCode opt-in), após integrar o ciclo de 2026-10-19; snapshot anterior ao § 18, que removeu o smoke | review-16, review-17, review-18 |
 | 35 | T04 | `node --test tests/harness-evaluation.test.js` | local | baseline falha exatamente tenant/identity; correção em cópia passa | ciclo 2026-10-19 |
 | 36 | T09 | roteiros E01 e E03 | viva | quatro contextos Codex independentes; E01 parou sem aprovação/edição, E03 relatou achado fora da cópia; hashes da cópia intactos | relatório de avaliação do ciclo |
 | 37 | T09 | roteiros E02 e E04 | viva | quatro contextos Codex independentes; ambos verificaram baseline, corrigiram só `src/records.js` em cópias e passaram os sete checks; E04 reconciliou checkpoint antes da aprovação | relatório de avaliação do ciclo |
@@ -49,17 +50,23 @@ permanecem pendentes e o projeto não é declarado `DONE`.
 | 41 | T03/T10 | contrato e review do ciclo | local | campos de evidência, confiança, contraprova e alvo | review do ciclo |
 | 42 | T05 | `node --test tests/instruction-improvement.test.js` | local | contrato e roteiro de uma candidata; nenhuma adoção sem prova | ciclo 2026-10-19 |
 | 43 | T01/T07 | testes de contexto e retomada | local | regras protegidas, seleção ou fallback completo | ciclo 2026-10-19 |
-| 44 | T08 | sincronização e matriz 1–48 | local | verificação local; pendências anteriores preservadas | ciclo 2026-10-19 |
+| 44 | T08 | sincronização e matriz 1–48 | local | verificação local; pendências anteriores preservadas; sincronização retirada e matriz ampliada para 1–54 no § 18 | ciclo 2026-10-19, review-18 |
 | 45 | T06/T09 | testes do preparador e gh --version | pendente | simulação local passou; instalação em ambiente ausente ainda não observada | relatório de avaliação do ciclo |
 | 46 | T06/T09 | testes de falha/lock/PATH | pendente | fluxo local verificado; instalação real multiplataforma pendente | relatório de avaliação do ciclo |
 | 47 | T07/T09 | bootstrap e primeira ativação viva | pendente | integração local passou; encaminhamento pelo agente não observado | relatório de avaliação do ciclo |
 | 48 | T08 | npm.cmd test e validate-plan | local | regressão local sem dependências novas; smoke indisponível separado | ciclo 2026-10-19 |
+| 49 | T01/T02 | `node --test tests/manifestos.test.js` | local | inventário: nenhum arquivo de agente removido; manifestos de Claude Code e Codex presentes | review-18 |
+| 50 | T01/T02 | `node --test tests/hooks.test.js` | local | variáveis de agentes removidos não mudam a saída; Codex recebe envelope JSON | review-18 |
+| 51 | T01/T03 | `node --test tests/manifestos.test.js` | local | documentação e código publicados sem agente removido, fora de arquivos históricos | review-18 |
+| 52 | T03 | `claude plugin validate .` e `node --test tests/manifestos.test.js` | local | manifestos válidos e caminhos existentes | review-18 |
+| 53 | T01/T03 | `node --test tests/diagnostics.test.js` | local | tipo `retirado` aceito e fora das pendências; histórico preservado | review-18 |
+| 54 | T03 | `npm.cmd test` | local | suíte completa sem dependência nova | review-18 |
 
 ## Limitações
 
 Os critérios 2, 4, 5, 12, 14 e 17 exigem conversas independentes em cliente suportado;
-esta sessão não comprova novos projetos, `/clear` ou transições vivas. O critério 15
-permanece dispensado. A seleção efetiva dos critérios 28–32 depende de seleção/aplicação
+esta sessão não comprova novos projetos, `/clear` ou transições vivas. O critério 15 foi
+retirado com o suporte ao OpenCode (§ 18). A seleção efetiva dos critérios 28–32 depende de seleção/aplicação
 de modelo confirmáveis pela ferramenta; isso ainda não foi observado. O critério 38 exige
 recuperação de escritor delegado ainda ativo; não havia escritor ativo para recuperar.
 

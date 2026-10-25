@@ -296,7 +296,7 @@ function resolveProjeto(cwd) {
 function resolution(status, state, statePath, caminhos, errors = [], error = null) {
   // Os hooks antigos passam apenas `state` e `caminhos` para a camada de
   // instruções. Metadados não enumeráveis preservam a API da lista e carregam
-  // o diagnóstico sem obrigar todos os adaptadores a mudar juntos.
+  // o diagnóstico sem obrigar todos os hooks a mudar juntos.
   Object.defineProperties(caminhos, {
     status: { value: status, enumerable: false },
     statePath: { value: statePath, enumerable: false },

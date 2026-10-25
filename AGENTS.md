@@ -1,7 +1,7 @@
 # Stilo Code — pipeline de projeto
 
-Este arquivo é o ruleset completo. Sozinho, colado em qualquer agente, é suficiente para
-conduzir um projeto de ponta a ponta. Nenhum plugin, servidor ou pacote é necessário.
+Este arquivo é o ruleset completo do Stilo Code para Claude Code e Codex. Sozinho, é
+suficiente para conduzir um projeto de ponta a ponta; o plugin só automatiza a injeção.
 
 ## Regra 0 — uma pasta por projeto
 
@@ -147,7 +147,6 @@ que modelo ou esforço foi aplicado quando a ferramenta não confirmar.
 |---|---|---|
 | Claude Code | Opus 5, effort `xhigh` (`/model opus`) | Sonnet 5, effort `medium` (`/model sonnet`) — ou um subagente com `model: sonnet`, que não exige ação do usuário |
 | Codex | reasoning effort `high` | reasoning effort `medium` |
-| Demais agentes | o modelo mais capaz disponível | um modelo mais rápido e barato |
 
 ## 5. Módulos — carregar só quando a fase pede
 
@@ -245,19 +244,14 @@ instalação.
 | `context7` (MCP) | `SPEC`, `PLAN` — documentação atualizada de biblioteca |
 | `playwright` (MCP) | `EXECUTE`, `REVIEW` — verificar em navegador de verdade |
 
-Só entra nessa lista o que instala em quase todo agente: servidor MCP, ou pacote que envia
-adaptadores multi-agente. Ferramenta presa a um único agente cria um pipeline que quebra
-ao trocar de ferramenta — exatamente o problema que o Stilo Code existe para resolver.
+Só entra nessa lista o que funciona em Claude Code e em Codex: servidor MCP, ou pacote com
+integração para os dois. Ferramenta presa a um só deles cria um pipeline que quebra ao
+trocar de agente — exatamente o problema que o Stilo Code existe para resolver.
 
 ## 10. Suporte por agente
 
-- **Claude Code, Codex e Qoder:** integração por hooks, conforme os manifestos publicados.
-- **OpenCode:** o plugin preserva o hook experimental de system prompt. Como fallback
-  suportado, copie este `AGENTS.md` para a raiz do projeto; não dependa de
-  `config.instructions`, que no OpenCode V2 ainda não injeta arquivos no modelo.
-- **GitHub Copilot CLI:** suporte manual. Copie este `AGENTS.md` para o projeto ou forneça
-  seu conteúdo como instrução; o pacote não publica manifesto de hooks para o Copilot.
-- **Demais agentes:** use este `AGENTS.md` ou o adaptador próprio incluído no repositório.
+O Stilo Code suporta só Claude Code e Codex, ambos por hooks, conforme os manifestos
+publicados (`.claude-plugin/` e `.codex-plugin/`). Outros agentes não são suportados.
 
 ## 11. Funcionamento automático
 

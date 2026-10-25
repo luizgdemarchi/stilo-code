@@ -35,7 +35,7 @@ const MODELO_ALVO = {
 };
 
 // CLAUDE_PLUGIN_ROOT quando instalado como plugin; senão o diretório acima
-// deste arquivo, que é o que vale num checkout solto (OpenCode, uso manual).
+// deste arquivo, que é o que vale num checkout solto.
 function pluginRoot() {
   return process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..');
 }

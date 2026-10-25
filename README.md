@@ -67,8 +67,7 @@ Na primeira ativação suportada, o agente prepara o GitHub CLI (`gh`) fora dos 
 Reutiliza uma versão existente; quando ausente, usa WinGet, Homebrew já instalado ou
 apt/dnf com pacote disponível e permissões permitidas. A instalação é confirmada por
 versão; no Windows, o PATH pode exigir nova janela. Login é uma etapa separada.
-O cliente não precisa executar scripts npm durante `/plugin install`. Copiar `AGENTS.md`
-inclui o preparo pelas ferramentas do agente; copiar o arquivo sozinho não instala gh.
+O cliente não precisa executar scripts npm durante `/plugin install`.
 Falta de rede, gerenciador ou privilégio fica registrada sem bloquear o pipeline nem
 repetir automaticamente a tentativa. [Métodos, limites e retomada](docs/preparacao-github-cli.md).
 
@@ -94,57 +93,6 @@ depois de um `/clear`.
 Mesmo pacote, mesmo manifesto de hooks. Aponte o Codex para o repositório clonado; o
 `.codex-plugin/plugin.json` traz os hooks. O carregador do Codex fornece
 `CLAUDE_PLUGIN_ROOT` como alias compatível com o manifesto compartilhado.
-
-### GitHub Copilot CLI
-
-Suporte manual: copie `AGENTS.md` para a raiz do projeto ou forneça seu conteúdo como
-instrução. Este pacote não publica manifesto de hooks para o Copilot, portanto não promete
-injeção automática de estado ou retomada pós-`/clear` nesse agente.
-
-### OpenCode
-
-```bash
-git clone https://github.com/luizgdemarchi/stilo-code
-```
-
-No seu `opencode.json`:
-
-```json
-{ "plugin": ["/caminho/para/stilo-code/.opencode/plugins/stilo.mjs"] }
-```
-
-O plugin injeta o contexto automaticamente pelo hook experimental
-`experimental.chat.system.transform`. Se a versão do OpenCode não aceitar o hook, copie
-`AGENTS.md` para a raiz do projeto, onde o OpenCode o carrega como regra. Não use
-`config.instructions` como fallback no OpenCode V2; a integração viva só é confirmada
-quando o smoke test da CLI é executado.
-
-### Gemini CLI / Antigravity
-
-Clone o repositório e use o `gemini-extension.json`, que aponta o `AGENTS.md` como arquivo
-de contexto. A conversa natural aciona o pipeline; este pacote não publica comandos do Stilo.
-
-### Cursor, Windsurf, Cline, Kiro, Qoder
-
-Copie o arquivo de regra do agente para o seu projeto:
-
-| Agente | Arquivo |
-|---|---|
-| Cursor | `.cursor/rules/stilo.mdc` |
-| Windsurf | `.windsurf/rules/stilo.md` |
-| Cline | `.clinerules/stilo.md` |
-| Kiro | `.kiro/steering/stilo.md` |
-| Qoder | `.qoder/rules/stilo.md` |
-| Qualquer outro | `AGENTS.md` na raiz |
-
-Nesses agentes o pipeline funciona sem hooks: o ruleset está sempre no contexto e o próprio
-agente lê e grava o `state.json`. O Qoder também aceita hooks — o template está em
-`hooks/qoder-hooks.json`.
-
-### Sem instalar nada
-
-Cole o `AGENTS.md` no agente. Ele é autossuficiente de propósito: sozinho, conduz o
-pipeline inteiro.
 
 ## Funcionamento automático
 
@@ -189,9 +137,9 @@ sem aviso, sem pedir instalação.
 | `context7` (MCP) | `SPEC`, `PLAN` — docs atualizadas de biblioteca |
 | `playwright` (MCP) | `EXECUTE`, `REVIEW` — verificar em navegador de verdade |
 
-Só entram nessa lista pacotes que instalam em quase todo agente: servidor MCP, ou repo com
-adaptadores multi-agente. Ferramenta presa a um único agente cria um pipeline que quebra ao
-trocar de ferramenta — o problema que este pacote existe para resolver.
+Só entram nessa lista pacotes que funcionam em Claude Code e em Codex: servidor MCP, ou repo
+com integração para os dois. Ferramenta presa a um só deles cria um pipeline que quebra ao
+trocar de agente — o problema que este pacote existe para resolver.
 
 ### Auditoria opcional
 
@@ -210,20 +158,17 @@ você escrever** — escreveu em inglês, resposta em inglês.
 
 ```bash
 npm test          # node --test, zero dependências
-npm run sync      # regenera os adaptadores a partir do AGENTS.md
-node scripts/sync-adapters.js --check   # falha se algum adaptador divergir
 ```
 
-`AGENTS.md` é a fonte única do ruleset. Os seis arquivos de regra por agente são gerados,
-nunca editados à mão — um teste falha se saírem de sincronia.
+`AGENTS.md` é a fonte única do ruleset.
 
 O checkout e a cópia instalada do plugin são estados distintos. Depois de alterar o
 checkout, rode `claude plugin validate .`; `claude plugin details stilo-code@stilo-code`
 mostra a cópia ativa. A instalação só recebe mudanças após uma nova instalação ou
 atualização autorizada.
 
-O teste de instruções monitora um orçamento de 26.000 caracteres para os contextos nominais
-das sete fases. Ambiguidades com muitos projetos acrescentam texto proporcionalmente e
+O teste de instruções exige que o contexto injetado de cada fase caiba em 19.500 caracteres
+ou seja o contexto completo (fallback). Ambiguidades com muitos projetos acrescentam texto proporcionalmente e
 continuam sendo reportadas pelo diagnóstico. `UserPromptSubmit` usa uma linha curta;
 `SessionStart` e `SubagentStart` carregam o ruleset necessário para manter `AGENTS.md`
 autossuficiente.

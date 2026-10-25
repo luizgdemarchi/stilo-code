@@ -13,21 +13,12 @@ function existe(rel) {
   return fs.existsSync(path.join(RAIZ, rel));
 }
 
-function secaoMarkdown(texto, titulo, nivel) {
-  const marcador = `${'#'.repeat(nivel)} ${titulo}`;
-  const inicio = texto.indexOf(marcador);
-  assert.notStrictEqual(inicio, -1, `seção ausente: ${marcador}`);
-  const resto = texto.slice(inicio + marcador.length);
-  const proxima = resto.search(new RegExp(`^#{1,${nivel}}\\s`, 'm'));
-  return proxima === -1 ? resto : resto.slice(0, proxima);
-}
 
 const MANIFESTOS = [
   '.claude-plugin/plugin.json',
   '.claude-plugin/marketplace.json',
   '.codex-plugin/plugin.json',
   'hooks/claude-codex-hooks.json',
-  'hooks/qoder-hooks.json',
   'package.json',
 ];
 
@@ -114,64 +105,51 @@ test('nenhum arquivo publicado cita pacote preso a um único agente', () => {
   varre(RAIZ, '');
 });
 
-test('os adaptadores estão em dia com o AGENTS.md', () => {
-  // Critério de aceite 8 do spec.
-  const r = require('node:child_process').spawnSync(
-    process.execPath,
-    [path.join(RAIZ, 'scripts', 'sync-adapters.js'), '--check'],
-    { encoding: 'utf8' }
-  );
+// Spec § 18: só Claude Code e Codex têm integração publicada.
+const REMOVIDOS = [
+  '.opencode',
+  'opencode.json',
+  'gemini-extension.json',
+  'hooks/qoder-hooks.json',
+  '.cursor',
+  '.kiro',
+  '.clinerules',
+  '.windsurf',
+  '.qoder',
+  '.agents',
+  'scripts/sync-adapters.js',
+  'tests/opencode-runtime.test.js',
+];
 
-  assert.strictEqual(r.status, 0, r.stderr || r.stdout);
-});
-
-// Sem parser de TOML embutido no Node, um verificador mínimo do que nós mesmos
-// geramos: as chaves obrigatórias, e barra invertida só dentro de string
-// literal ('''), onde o TOML não interpreta escape nenhum.
-test('o plugin do OpenCode importa e injeta apenas contexto automático', async () => {
-  const url = require('node:url').pathToFileURL(
-    path.join(RAIZ, '.opencode', 'plugins', 'stilo.mjs')
-  ).href;
-  const plugin = await import(url);
-
-  const instancia = await plugin.default({});
-  const saida = { system: [] };
-  assert.strictEqual(typeof instancia['experimental.chat.system.transform'], 'function');
-  await instancia['experimental.chat.system.transform']({}, saida);
-  assert.match(saida.system[0], /Stilo Code — pipeline de projeto/);
-});
-
-test('a documentação não promove Copilot à camada de hooks sem manifesto', () => {
-  const spec = fs.readFileSync(path.join(RAIZ, 'spec.md'), 'utf8');
-  const suporteSpec = secaoMarkdown(spec, '10. Suporte por agente', 2);
-  const camadaManual = suporteSpec.match(/\*\*Camada 1[\s\S]*?(?=\n\*\*Camada 2)/);
-  const camadaHooks = suporteSpec.match(/\*\*Camada 2[\s\S]*?:\*\*([\s\S]*?)(?:\n\*\*|$)/);
-  assert.ok(camadaManual, 'spec.md precisa delimitar a camada manual');
-  assert.match(camadaManual[0], /GitHub Copilot CLI/i);
-  assert.match(camadaManual[0], /manual/i);
-  assert.ok(camadaHooks, 'spec.md precisa delimitar a camada de hooks');
-  assert.doesNotMatch(camadaHooks[1], /Copilot/i);
-
-  const agentes = fs.readFileSync(path.join(RAIZ, 'AGENTS.md'), 'utf8');
-  const suporteAgentes = secaoMarkdown(agentes, '10. Suporte por agente', 2);
-  assert.match(suporteAgentes, /GitHub Copilot CLI:[\s\S]*suporte manual/i);
-  assert.doesNotMatch(
-    suporteAgentes.match(/\*\*Claude Code[\s\S]*?(?=\n- \*\*)/)[0],
-    /Copilot/i
-  );
-
-  for (const [rel, titulo, manual] of [
-    ['README.md', 'GitHub Copilot CLI', /Suporte manual/],
-    ['README.en.md', 'GitHub Copilot CLI', /Manual support/],
-  ]) {
-    const texto = fs.readFileSync(path.join(RAIZ, rel), 'utf8');
-    const secao = secaoMarkdown(texto, titulo, 3);
-    assert.match(secao, manual, `${rel}: Copilot precisa constar como suporte manual`);
-    assert.match(secao, /não publica|does not publish/i, `${rel}: manifesto ausente não declarado`);
-    assert.doesNotMatch(secao, /suporte automático|automatic support/i);
+test('só Claude Code e Codex têm integração publicada', () => {
+  // Critério de aceite 49 do spec.
+  for (const rel of REMOVIDOS) assert.strictEqual(existe(rel), false, `${rel} ainda existe`);
+  for (const rel of ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json', 'hooks/claude-codex-hooks.json']) {
+    assert.ok(existe(rel), `${rel} ausente`);
   }
+  assert.strictEqual(leJson('package.json').scripts.sync, undefined);
+});
 
-  const contrato = fs.readFileSync(path.join(RAIZ, 'docs/contrato-hooks.md'), 'utf8');
-  const compatibilidade = secaoMarkdown(contrato, 'Estado da compatibilidade', 2);
-  assert.match(compatibilidade, /GitHub Copilot CLI não verificado[\s\S]*suporte publicado é manual/i);
+test('documentação e código publicados não anunciam agente removido', () => {
+  // Critério de aceite 51 do spec. Reviews, specs, planos, avaliações e a matriz são históricos.
+  const removido = /\b(opencode|qoder|copilot|gemini|antigravity|cursor|windsurf|cline|clinerules|kiro)\b|sync-adapters|qualquer agente|demais agentes|any agent|other agents/i;
+  const raizes = [
+    'AGENTS.md',
+    'README.md',
+    'README.en.md',
+    'package.json',
+    '.claude-plugin/plugin.json',
+    '.claude-plugin/marketplace.json',
+    '.codex-plugin/plugin.json',
+  ];
+  const diretorios = ['modules', 'docs', 'hooks', 'scripts'].flatMap((dir) =>
+    fs.readdirSync(path.join(RAIZ, dir), { withFileTypes: true })
+      .filter((e) => e.isFile() && /\.(md|js|json)$/.test(e.name))
+      .map((e) => `${dir}/${e.name}`)
+  );
+  for (const rel of [...raizes, ...diretorios].filter((r) => r !== 'docs/aceite.md')) {
+    const linhas = fs.readFileSync(path.join(RAIZ, rel), 'utf8').split('\n');
+    const citacoes = linhas.filter((linha) => removido.test(linha));
+    assert.deepStrictEqual(citacoes, [], `${rel} cita agente removido`);
+  }
 });

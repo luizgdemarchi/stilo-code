@@ -105,9 +105,10 @@ test('diagnoseProject aponta DONE com evidência obrigatória pendente sem alter
     [
       '| Critério | Tarefa | Comando | Tipo | Resultado | Review |',
       '|---|---|---|---|---|---|',
-      ...Array.from({ length: 48 }, (_, index) => {
+      ...Array.from({ length: 54 }, (_, index) => {
         const criterion = index + 1;
-        const type = criterion === 2 ? 'pendente' : 'local';
+        // Retirado não é pendência: só o 2 bloqueia DONE.
+        const type = criterion === 2 ? 'pendente' : criterion === 3 ? 'retirado' : 'local';
         return `| ${criterion} | T5 | teste ${criterion} | ${type} | resultado ${criterion} | review-05 |`;
       }),
       '',
@@ -122,7 +123,7 @@ test('diagnoseProject aponta DONE com evidência obrigatória pendente sem alter
   assert.strictEqual(diagnostico.completion.mandatory, true);
   assert.deepStrictEqual(diagnostico.completion.criteria, ['2']);
   assert.match(diagnostico.completion.reason, /evidência obrigatória pendente/i);
-  assert.strictEqual(diagnostico.evidence.criteria.length, 48);
+  assert.strictEqual(diagnostico.evidence.criteria.length, 54);
   assert.deepStrictEqual(diagnostico.evidence.errors, []);
   assert.strictEqual(fs.readFileSync(statePath, 'utf8'), antes);
   assert.deepStrictEqual(fs.readdirSync(stilo).sort(), ['state.json']);
@@ -147,12 +148,12 @@ test('readEvidence separa tipos e relata linha inválida', () => {
   assert.strictEqual(evidence.status, 'present');
   assert.deepStrictEqual(evidence.criteria.map((item) => [item.criterion, item.type]), [['1', 'local']]);
   assert.deepStrictEqual(evidence.errors, [
-    'linha 4: tipo deve ser local, viva ou pendente',
-    'critérios obrigatórios ausentes: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48',
+    'linha 4: tipo deve ser local, viva, pendente ou retirado',
+    'critérios obrigatórios ausentes: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54',
   ]);
 });
 
-test('readEvidence exige cobertura única dos 48 critérios e mantém DONE pendente', () => {
+test('readEvidence exige cobertura única dos 54 critérios e mantém DONE pendente', () => {
   const raiz = tmpdir();
   const { projeto } = criaProjeto(raiz, estado({ phase: 'DONE', reviewRound: 0 }));
   fs.writeFileSync(path.join(projeto, 'spec.md'), '# Spec\n');
@@ -172,22 +173,23 @@ test('readEvidence exige cobertura única dos 48 critérios e mantém DONE pende
   const diagnostico = diagnoseProject(projeto);
 
   assert.deepStrictEqual(diagnostico.evidence.duplicates, ['1']);
-  assert.deepStrictEqual(diagnostico.evidence.missing, ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48']);
+  assert.deepStrictEqual(diagnostico.evidence.missing, ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54']);
   assert.match(diagnostico.evidence.errors.join('\n'), /critério duplicado: 1/i);
   assert.match(diagnostico.evidence.errors.join('\n'), /critérios obrigatórios ausentes: 2, 3, 4/i);
   assert.strictEqual(diagnostico.completion.status, 'pending');
   assert.deepStrictEqual(diagnostico.completion.criteria, [...diagnostico.evidence.missing, '1']);
 });
 
-test('docs/aceite registra os 48 critérios e mantém o smoke OpenCode pendente', () => {
+test('docs/aceite registra os 54 critérios e retira o smoke OpenCode', () => {
   const evidence = readEvidence(path.join(__dirname, '..', 'docs', 'aceite.md'));
 
-  assert.strictEqual(evidence.criteria.length, 48);
+  assert.strictEqual(evidence.criteria.length, 54);
   assert.deepStrictEqual(evidence.errors, []);
   const openCode = evidence.criteria.find((criterion) => criterion.criterion === '15');
-  assert.strictEqual(openCode.type, 'pendente');
+  assert.strictEqual(openCode.type, 'retirado');
   assert.strictEqual(openCode.command, 'smoke test OpenCode');
-  assert.strictEqual(openCode.result, 'N\u00e3o executado por dispensa do usu\u00e1rio; sem alega\u00e7\u00e3o de compatibilidade viva');
+  assert.match(openCode.result, /suporte removido/i);
+  assert.match(openCode.result, /§ 18/);
 });
 
 test('readCycle tolera campos legados, rejeita id inseguro e diagnóstico lista documentos do ciclo', () => {
@@ -232,11 +234,11 @@ test('readCycle tolera campos legados, rejeita id inseguro e diagnóstico lista 
   assert.strictEqual(fs.existsSync(path.join(planDir, '2026-09-04-ciclo-anterior-plan.md')), true);
 });
 
-test('readEvidence rejeita ID inesperado mesmo com todos os 48 presentes', () => {
+test('readEvidence rejeita ID inesperado mesmo com todos os 54 presentes', () => {
   const root=tmpdir(),file=path.join(root,'aceite.md');
   const matrix=fs.readFileSync(path.join(__dirname,'../docs/aceite.md'),'utf8');
-  fs.writeFileSync(file,matrix.replace('| 48 |','| 49 | T | teste | local | passou | review |\n| 48 |'));
+  fs.writeFileSync(file,matrix.replace('| 54 |','| 55 | T | teste | local | passou | review |\n| 54 |'));
   const evidence=readEvidence(file);
   assert.deepStrictEqual(evidence.missing,[]);
-  assert.match(evidence.errors.join('\n'),/critério inesperado: 49/);
+  assert.match(evidence.errors.join('\n'),/critério inesperado: 55/);
 });

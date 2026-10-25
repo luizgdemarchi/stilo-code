@@ -3,12 +3,10 @@
 //
 // Ver docs/contrato-hooks.md. O resumo: Claude Code aceita stdout cru no
 // SessionStart e no UserPromptSubmit, mas descarta o contexto do SubagentStart
-// se ele não vier no envelope hookSpecificOutput. Codex e Qoder sempre exigem
-// JSON. Uma escrita em stdout por invocação — duas viram JSON inválido.
+// se ele não vier no envelope hookSpecificOutput. O Codex sempre exige JSON.
+// Uma escrita em stdout por invocação — duas viram JSON inválido.
 
-const isCopilot = Boolean(process.env.COPILOT_PLUGIN_DATA);
-const isCodex = !isCopilot && Boolean(process.env.PLUGIN_DATA);
-const isQoder = !isCopilot && !isCodex && Boolean(process.env.QODER_SESSION_ID);
+const isCodex = Boolean(process.env.PLUGIN_DATA);
 
 const stdoutGuards = new WeakSet();
 
@@ -31,13 +29,7 @@ function writeHookOutput(event, context) {
     installStdoutGuard();
     const texto = String(context || '');
 
-    if (isCopilot) {
-      process.stdout.write(
-        JSON.stringify(event === 'SessionStart' && texto ? { additionalContext: texto } : {})
-      );
-      return;
-    }
-    if (isCodex || isQoder) {
+    if (isCodex) {
       process.stdout.write(texto ? envelope(event, texto) : '{}');
       return;
     }
@@ -88,4 +80,4 @@ function readStdinJson(callback, timeoutMs) {
   }, timeoutMs || 1000).unref();
 }
 
-module.exports = { installStdoutGuard, isCodex, isCopilot, isQoder, readStdinJson, writeHookOutput };
+module.exports = { installStdoutGuard, isCodex, readStdinJson, writeHookOutput };

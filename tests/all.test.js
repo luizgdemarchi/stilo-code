@@ -10,7 +10,6 @@ require('./instruction-improvement.test.js');
 require('./github-cli-setup.test.js');
 require('./github-cli-bootstrap.test.js');
 require('./manifestos.test.js');
-require('./opencode-runtime.test.js');
 require('./orchestration.test.js');
 require('./state.test.js');
 require('./validate-plan.test.js');

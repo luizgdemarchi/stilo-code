@@ -6,7 +6,7 @@ const path = require('path');
 
 const { resolveProjeto } = require('./stilo-state.js');
 
-const REQUIRED_EVIDENCE_CRITERIA = Array.from({ length: 48 }, (_, index) => String(index + 1));
+const REQUIRED_EVIDENCE_CRITERIA = Array.from({ length: 54 }, (_, index) => String(index + 1));
 
 function fileCheck(name, filePath) {
   try {
@@ -117,8 +117,8 @@ function readEvidence(filePath) {
       errors.push(`linha ${index + 1}: todos os campos da evidência são obrigatórios`);
       continue;
     }
-    if (!['local', 'viva', 'pendente'].includes(type)) {
-      errors.push(`linha ${index + 1}: tipo deve ser local, viva ou pendente`);
+    if (!['local', 'viva', 'pendente', 'retirado'].includes(type)) {
+      errors.push(`linha ${index + 1}: tipo deve ser local, viva, pendente ou retirado`);
       continue;
     }
     criteria.push({

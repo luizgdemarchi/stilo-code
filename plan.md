@@ -2,7 +2,10 @@
 
 # Stilo Code — Plano de Implementação
 
-> **Proposta atual (2026-10-19):** confiabilidade do agente e preparação do GitHub CLI.
+> **Ciclo atual (2026-10-24):** suporte apenas a Claude Code e Codex, conforme `spec.md` § 18.
+> Plano: `docs/superpowers/plans/2026-10-24-apenas-claude-codex-plan.md`.
+
+> **Proposta anterior (2026-10-19):** confiabilidade do agente e preparação do GitHub CLI.
 > Plano aprovado em `docs/superpowers/plans/2026-10-19-confiabilidade-agente-plan.md`;
 > spec em `docs/superpowers/specs/2026-10-19-confiabilidade-agente-design.md` e `spec.md` § 17.
 > Spec e plano aprovados explicitamente em 2026-10-19; implementação local verificada,

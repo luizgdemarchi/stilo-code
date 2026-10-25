@@ -119,17 +119,47 @@ test('prompt arbitrário não grava estado nem ciclo', () => {
   assert.strictEqual(fs.existsSync(path.join(c.projeto, '.stilo', 'cycle.json')), false);
 });
 
-test('Qoder recebe o mesmo contexto automático', () => {
+test('variáveis de agentes removidos não mudam a saída do Claude Code', () => {
+  // Spec § 18: só Claude Code e Codex são reconhecidos.
   const c = cenario({ phase: 'PLAN', enxuto: 'auto' });
-  const r = rodaHook('stilo-prompt.js', {
+  // PLUGIN_DATA vazio isola o teste de um shell do Codex que exporte a variável.
+  const claude = { PLUGIN_DATA: '' };
+  const stdin = JSON.stringify({ prompt: 'oi', cwd: c.projeto });
+  for (const hook of ['stilo-activate.js', 'stilo-prompt.js', 'stilo-subagent.js']) {
+    const base = rodaHook(hook, { cwd: c.projeto, home: c.home, stdin, env: claude });
+    assert.strictEqual(base.status, 0, hook);
+    assert.match(base.stdout, /Stilo Code|stilo: projeto=/, hook);
+    for (const extra of [{ QODER_SESSION_ID: 'abc' }, { COPILOT_PLUGIN_DATA: 'x' }]) {
+      const env = Object.assign({}, claude, extra);
+      const r = rodaHook(hook, { cwd: c.projeto, home: c.home, stdin, env });
+      assert.strictEqual(r.status, 0, `${hook} ${JSON.stringify(extra)}`);
+      assert.strictEqual(r.stdout, base.stdout, `${hook} ${JSON.stringify(extra)}`);
+    }
+  }
+});
+
+test('Codex recebe envelope JSON no SessionStart e no UserPromptSubmit', () => {
+  const c = cenario({ phase: 'PLAN', enxuto: 'auto' });
+  const env = { PLUGIN_DATA: path.join(c.home, 'plugin-data') };
+  const inicio = JSON.parse(rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, env }).stdout);
+  assert.strictEqual(inicio.hookSpecificOutput.hookEventName, 'SessionStart');
+  assert.match(inicio.hookSpecificOutput.additionalContext, /Stilo Code — pipeline de projeto/);
+  const prompt = JSON.parse(rodaHook('stilo-prompt.js', {
     cwd: c.projeto,
     home: c.home,
     stdin: JSON.stringify({ prompt: 'oi', cwd: c.projeto }),
-    env: { QODER_SESSION_ID: 'abc' },
-  });
-  const saida = JSON.parse(r.stdout);
-  assert.match(saida.hookSpecificOutput.additionalContext, /Stilo Code — pipeline de projeto/);
-  assert.match(saida.hookSpecificOutput.additionalContext, /\*\*Fase:\*\* PLAN/);
+    env,
+  }).stdout);
+  assert.strictEqual(prompt.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
+  assert.match(prompt.hookSpecificOutput.additionalContext, /^stilo: projeto=/);
+  const sub = JSON.parse(rodaHook('stilo-subagent.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ cwd: c.projeto }),
+    env,
+  }).stdout);
+  assert.strictEqual(sub.hookSpecificOutput.hookEventName, 'SubagentStart');
+  assert.match(sub.hookSpecificOutput.additionalContext, /Stilo Code — pipeline de projeto/);
 });
 
 test('stdin vazio ou inválido não quebra o hook', () => {

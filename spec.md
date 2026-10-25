@@ -545,3 +545,47 @@ suportada, com autenticação separada.
 Plano aprovado:
 `docs/superpowers/plans/2026-10-19-confiabilidade-agente-plan.md`.
 Revisões e relatório de avaliação registram a execução e suas pendências.
+
+## 18. Proposta — suporte apenas a Claude Code e Codex
+
+Status: escopo dado e seção aprovada pelo usuário em 2026-10-24 ("manter o uso só pra Codex e Claude; tudo
+que não for isso pode excluir").
+
+### Problema e objetivo
+
+O Stilo publica integrações para nove agentes, mas só Claude Code e Codex são usados. Cada
+integração extra custa teste, contexto injetado, documentação e superfície de ataque, e
+atrasa o audit de segurança. Objetivo: publicar apenas o necessário para Claude Code e
+Codex, sem mudar o comportamento do pipeline nesses dois.
+
+### Requisitos
+
+1. Remover arquivos, manifestos, plugins, adaptadores e scripts que só servem a OpenCode,
+   Qoder, GitHub Copilot CLI, Gemini CLI/Antigravity, Cursor, Windsurf, Cline e Kiro,
+   incluindo `scripts/sync-adapters.js` e o script `sync` do `package.json`.
+2. O runtime dos hooks reconhece só Claude Code e Codex; a detecção e os envelopes dos
+   agentes removidos saem. Codex mantém o envelope que exige hoje.
+3. `AGENTS.md`, READMEs, módulos e documentos não históricos citam como suportados apenas
+   Claude Code e Codex. O caminho manual "colar `AGENTS.md` em qualquer agente" sai.
+4. Histórico preservado: reviews, specs, planos e avaliações anteriores não são editados nem
+   apagados. Critérios de aceite que dependem de agente ou arquivo removido não são apagados:
+   passam ao tipo `retirado`, aceito pelo diagnóstico e não contado como pendência.
+5. Manifestos de Claude Code e Codex continuam válidos e apontando para hooks existentes.
+6. Nenhuma dependência, comando ou configuração pública nova.
+
+### Não-objetivos e fora de escopo
+
+- Mudar fases, estado, compactação de contexto ou política de orquestração.
+- Atualizar o plugin instalado em `~/.claude/plugins/cache` ou arquivos fora do repositório.
+- O audit de segurança, que roda depois deste ciclo sobre o código resultante.
+
+### Critérios de aceite
+
+| # | Critério | Verificação |
+|---|---|---|
+| 49 | Nenhum arquivo de integração de agente removido é publicado | teste de inventário em `tests/manifestos.test.js` |
+| 50 | Runtime reconhece só Claude Code e Codex | `node --test tests/hooks.test.js` |
+| 51 | Documentação publicada não anuncia agente removido | teste textual fora de arquivos históricos |
+| 52 | Manifestos de Claude Code e Codex válidos | `claude plugin validate .` e `tests/manifestos.test.js` |
+| 53 | Histórico preservado; critérios dependentes viram `retirado` | `node --test tests/diagnostics.test.js` e inventário |
+| 54 | Suíte completa passa sem dependência nova | `npm.cmd test` |

@@ -14,11 +14,10 @@ function diretorio(data) {
 
 function main(data) {
   const { resolveProjeto } = require('./stilo-state.js');
-  const { buildInjectedContext, buildStateLine } = require('./stilo-instructions.js');
-  const { isQoder, writeHookOutput } = require('./stilo-runtime.js');
+  const { buildStateLine } = require('./stilo-instructions.js');
+  const { writeHookOutput } = require('./stilo-runtime.js');
   const { state, caminhos } = resolveProjeto(diretorio(data));
-  const contexto = buildInjectedContext(state, caminhos);
-  writeHookOutput('UserPromptSubmit', isQoder ? contexto : buildStateLine(state, caminhos));
+  writeHookOutput('UserPromptSubmit', buildStateLine(state, caminhos));
 }
 
 if (require.main === module) {

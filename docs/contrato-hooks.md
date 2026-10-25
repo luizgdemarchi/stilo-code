@@ -7,17 +7,9 @@ para arquivo e linha.
 
 ## Estado da compatibilidade
 
-- **Observado no pacote:** Claude Code, Codex e Qoder têm manifestos publicados. O Codex
-  define `PLUGIN_DATA` para o formato de saída e também fornece `CLAUDE_PLUGIN_ROOT` como
-  alias da raiz do plugin, permitindo reutilizar `hooks/claude-codex-hooks.json`.
-- **OpenCode experimental:** `.opencode/plugins/stilo.mjs` preserva
-  `experimental.chat.system.transform`. No OpenCode V2, `config.instructions` é retido na
-  configuração, mas seus arquivos não chegam ao modelo; o fallback suportado é copiar
-  `AGENTS.md` para a raiz do projeto. A compatibilidade viva só fica confirmada quando o
-  smoke test encontra e executa a CLI.
-- **GitHub Copilot CLI não verificado:** `stilo-runtime.js` mantém o envelope de
-  compatibilidade com `COPILOT_PLUGIN_DATA`, mas o pacote não publica manifesto Copilot.
-  O suporte publicado é manual por `AGENTS.md`; essa branch isolada não prova hooks.
+- **Observado no pacote:** Claude Code e Codex têm manifestos publicados; são os únicos
+  agentes suportados (spec § 18). O Codex define
+  `PLUGIN_DATA` para o formato de saída e também fornece `CLAUDE_PLUGIN_ROOT` como alias da raiz do plugin, permitindo reutilizar `hooks/claude-codex-hooks.json`.
 
 ## 1. Como o agente passa dados ao hook
 
@@ -55,10 +47,8 @@ Tudo em **stdout**. O formato depende do agente e do evento — `writeHookOutput
 
 | Agente | Detecção | `SessionStart` | `UserPromptSubmit` | `SubagentStart` |
 |---|---|---|---|---|
-| Claude Code | nenhuma env das outras | **texto cru** | texto cru | `{"hookSpecificOutput":{"hookEventName":…,"additionalContext":…}}` |
+| Claude Code | sem `PLUGIN_DATA` | **texto cru** | texto cru | `{"hookSpecificOutput":{"hookEventName":…,"additionalContext":…}}` |
 | Codex | `process.env.PLUGIN_DATA` | `{"systemMessage":…,"hookSpecificOutput":{…}}` | idem | idem |
-| Copilot CLI *(compatibilidade não verificada)* | `process.env.COPILOT_PLUGIN_DATA` | `{"additionalContext":…}` | `{}` (ignora) | `{}` (ignora) |
-| Qoder | `process.env.QODER_SESSION_ID` | *(não tem o evento)* | `{"hookSpecificOutput":{…}}` | via `PreToolUse` matcher `task\|Task` |
 
 Detalhes que só aparecem lendo o código:
 
@@ -68,12 +58,8 @@ Detalhes que só aparecem lendo o código:
 - **Codex sempre exige JSON**, e usa `systemMessage` para a linha visível ao usuário e
   `hookSpecificOutput.additionalContext` para o contexto injetado — são coisas diferentes
   (`ponytail-runtime.js:43-53`).
-- **Qoder não tem `SessionStart`.** O `UserPromptSubmit` faz papel duplo: ativa na primeira
-  mensagem e injeta o ruleset em toda mensagem (`ponytail-mode-tracker.js:96-113`). Por
-  isso o ponytail dobra a confirmação de troca de modo dentro do mesmo JSON: **uma escrita
-  em stdout por invocação** (`ponytail-mode-tracker.js:107-111`).
 - **Um `process.stdout.write` por invocação.** Duas escritas viram JSON concatenado
-  inválido no Codex/Qoder.
+  inválido no Codex.
 
 ## 3. Manifesto e resolução de caminho
 
@@ -88,12 +74,10 @@ Detalhes que só aparecem lendo o código:
 - `"timeout": 5`, `"statusMessage"` opcional.
 - Raiz do plugin: `${CLAUDE_PLUGIN_ROOT}` em POSIX, `$env:CLAUDE_PLUGIN_ROOT` no
   PowerShell. No Codex, `CLAUDE_PLUGIN_ROOT` é um alias compatível da raiz do plugin; o
-  formato de saída continua selecionado por `PLUGIN_DATA`. O Qoder não expande nada — seu
-  manifesto é um template com o caminho literal a substituir (`qoder-hooks.json:2`).
+  formato de saída continua selecionado por `PLUGIN_DATA`.
 
 Dentro do JS, o ponytail nunca lê `CLAUDE_PLUGIN_ROOT`: resolve tudo por `__dirname`
-(`ponytail-instructions.js:9`). Mais robusto, porque funciona também em checkout solto
-(OpenCode). O Stilo Code faz igual, com `CLAUDE_PLUGIN_ROOT` só como sobreposição.
+(`ponytail-instructions.js:9`). Mais robusto, porque funciona também em checkout solto. O Stilo Code faz igual, com `CLAUDE_PLUGIN_ROOT` só como sobreposição.
 
 ## 4. Regra de falha
 

@@ -26,8 +26,7 @@ It reuses an existing version or uses WinGet, an existing Homebrew, or apt/dnf w
 already configured package repository and allowed privileges. It validates the executable;
 Windows may require a new window to refresh PATH. Authentication remains a separate step.
 Plugin installation is distinct from activation; npm install scripts are not assumed.
-Copying `AGENTS.md` directs the agent to prepare gh with its tools; the file alone cannot
-install it. Unavailable network, manager or privileges remain pending without blocking the
+Unavailable network, manager or privileges remain pending without blocking the
 pipeline or automatic retries. [Methods and limits (Portuguese)](docs/preparacao-github-cli.md).
 
 Resumption compares state, checkpoint and checkout before edits. Tasks declare exclusive
@@ -99,57 +98,6 @@ Same package, same hook manifest. Point Codex at the cloned repo;
 `.codex-plugin/plugin.json` carries the hooks. Codex exposes
 `CLAUDE_PLUGIN_ROOT` as a compatibility alias for the shared manifest.
 
-### GitHub Copilot CLI
-
-Manual support: copy `AGENTS.md` to the project root or provide its contents as
-instructions. This package does not publish a Copilot hook manifest, so it does not claim
-automatic state injection or post-`/clear` recovery in that agent.
-
-### OpenCode
-
-```bash
-git clone https://github.com/luizgdemarchi/stilo-code
-```
-
-In your `opencode.json`:
-
-```json
-{ "plugin": ["/path/to/stilo-code/.opencode/plugins/stilo.mjs"] }
-```
-
-The plugin injects context automatically through the experimental
-`experimental.chat.system.transform` hook. If the installed OpenCode version does not
-accept the hook, copy `AGENTS.md` to the project root, where OpenCode loads it as a rule.
-Do not use `config.instructions` as the fallback on OpenCode V2; live compatibility is
-confirmed only when the CLI smoke test runs.
-
-### Gemini CLI / Antigravity
-
-Clone the repo and use `gemini-extension.json`, which points at `AGENTS.md` as the context
-file. This package publishes no Stilo commands; normal conversation activates the pipeline.
-
-### Cursor, Windsurf, Cline, Kiro, Qoder
-
-Copy your agent's rule file into your project:
-
-| Agent | File |
-|---|---|
-| Cursor | `.cursor/rules/stilo.mdc` |
-| Windsurf | `.windsurf/rules/stilo.md` |
-| Cline | `.clinerules/stilo.md` |
-| Kiro | `.kiro/steering/stilo.md` |
-| Qoder | `.qoder/rules/stilo.md` |
-| Anything else | `AGENTS.md` at the root |
-
-In those agents the pipeline works without hooks: the ruleset is always in context and the
-agent reads and writes `state.json` itself. Qoder also supports hooks — the template is in
-`hooks/qoder-hooks.json`.
-
-### Without installing anything
-
-Paste `AGENTS.md` into the agent. It is self-sufficient by design: on its own, it runs the
-whole pipeline.
-
 ## Automatic operation
 
 After installation, hooks detect the project and inject state and instructions into every
@@ -193,9 +141,9 @@ prompt to install.
 | `context7` (MCP) | `SPEC`, `PLAN` — up-to-date library docs |
 | `playwright` (MCP) | `EXECUTE`, `REVIEW` — verify in a real browser |
 
-Only packages that install in nearly every agent make this list: an MCP server, or a repo
-shipping multi-agent adapters. A tool tied to a single agent creates a pipeline that breaks
-when you switch tools — the very problem this package exists to solve.
+Only packages that work in both Claude Code and Codex make this list: an MCP server, or a
+repo shipping integrations for both. A tool tied to only one of them creates a pipeline that
+breaks when you switch agents — the very problem this package exists to solve.
 
 ### Optional audit
 
@@ -214,20 +162,17 @@ language you write in** — write in English, get English back.
 
 ```bash
 npm test          # node --test, zero dependencies
-npm run sync      # regenerates the adapters from AGENTS.md
-node scripts/sync-adapters.js --check   # fails if any adapter drifted
 ```
 
-`AGENTS.md` is the single source of truth for the ruleset. The six per-agent rule files are
-generated, never hand-edited — a test fails if they drift.
+`AGENTS.md` is the single source of truth for the ruleset.
 
 The checkout and the installed plugin copy are separate states. After changing the
 checkout, run `claude plugin validate .`; `claude plugin details stilo-code@stilo-code`
 shows the active copy. The installation receives changes only after an authorized install
 or update.
 
-The instruction test monitors a 26,000-character budget for the seven nominal phase
-contexts. Ambiguities with many projects add text proportionally and remain reported by
+The instruction test requires each phase's injected context to fit in 19,500 characters or
+to be the full context (fallback). Ambiguities with many projects add text proportionally and remain reported by
 the diagnostic. `UserPromptSubmit` still uses a short state line; `SessionStart` and
 `SubagentStart` load the ruleset needed to keep `AGENTS.md` self-contained.
 

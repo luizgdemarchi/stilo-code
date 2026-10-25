@@ -4,7 +4,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const RAIZ = path.join(__dirname, '..');
-const { ADAPTADORES } = require(path.join(RAIZ, 'scripts', 'sync-adapters.js'));
 
 function le(rel) {
   return fs.readFileSync(path.join(RAIZ, rel), 'utf8');
@@ -28,15 +27,6 @@ test('o contrato publicado de orquestração permanece presente', () => {
   assert.match(revisor, /deduplica.*descart.*sem cenário concreto.*já\s+resolvid.*gravidade.*\.stilo\/review-NN\.md/is);
   assert.match(revisor, /sem subagentes/i);
   assert.match(revisor, /sem erro.*sem.*instala/is);
-});
-
-test('cada adaptador sincronizado contém o contrato de tarefa', () => {
-  assert.strictEqual(ADAPTADORES.length, 6);
-  for (const { destino } of ADAPTADORES) {
-    const texto = le(destino);
-    assert.match(texto, /Files:/, `${destino}: sem Files:`);
-    assert.match(texto, /Depends-on:/, `${destino}: sem Depends-on:`);
-  }
 });
 
 test('seleção registra pedido, confirmação e resultado separadamente', () => {

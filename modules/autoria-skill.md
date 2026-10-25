@@ -70,28 +70,16 @@ solto precisa saber se ele se aplica.
 
 O que **nunca** sai do arquivo principal: as regras que valem sempre, e a ordem dos passos.
 
-## Adaptadores multi-agente
+## Claude Code e Codex
 
-Uma skill que só instala em um agente prende o usuário a ele. Se o pacote é para ser
-portátil, mantenha **uma fonte única de verdade** — normalmente o `AGENTS.md` da raiz — e
-gere o resto por script, com uma flag de verificação que falha quando algo sai de sincronia.
-Cópias manuais do mesmo texto divergem em uma semana.
+O Stilo Code só suporta Claude Code e Codex. Uma skill que deve rodar nos dois mantém **uma
+fonte única de verdade** — normalmente o `AGENTS.md` da raiz — e manifestos finos que
+apontam para ela. Cópias manuais do mesmo texto divergem em uma semana.
 
 | Agente | Arquivo |
 |---|---|
 | Claude Code | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `skills/<nome>/SKILL.md` do projeto |
 | Codex | `.codex-plugin/plugin.json`, `AGENTS.md` |
-| OpenCode | `opencode.json`, `.opencode/plugins/*.mjs` |
-| Gemini CLI | `gemini-extension.json` |
-| Cursor | `.cursor/rules/*.mdc` (frontmatter com `alwaysApply`) |
-| Windsurf | `.windsurf/rules/*.md` |
-| Cline | `.clinerules/*.md` |
-| Kiro | `.kiro/steering/*.md` |
-| Qoder | `.qoder/rules/*.md` |
-| Genérico | `AGENTS.md` na raiz |
-
-`AGENTS.md` na raiz é o piso: qualquer agente que leia um arquivo de regra do projeto pega
-esse. É também o que faz o pacote funcionar colado à mão, sem instalação nenhuma.
 
 ## Hooks
 
