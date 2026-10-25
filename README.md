@@ -1,177 +1,73 @@
 # Stilo Code
 
-O pipeline de projeto que sobrevive ao `/clear`.
+**Um pipeline de projeto que continua de onde parou.** Stilo Code é um plugin para Claude
+Code e Codex que mantém em disco a fase de cada projeto e orienta o agente a registrar as
+decisões nos documentos do fluxo. Os hooks leem esse estado automaticamente, para que o
+agente retome o trabalho mesmo depois de uma nova sessão ou de limpar o contexto com
+`/clear`.
 
 *[English](README.en.md)*
 
-## O problema
+## O que o Stilo Code faz
 
-Você tem um jeito de tocar projeto: pensar antes, escrever a spec, planejar, executar,
-revisar. Enquanto isso vive só como memória do agente, três coisas acontecem:
+O Stilo conduz o trabalho por etapas: entender o pedido antes de propor, registrar o que
+deve ser feito, planejar como, executar e revisar. A execução só começa depois da
+aprovação da spec e do plano. Se a revisão encontrar problemas, o agente corrige e revisa
+de novo.
 
-1. **Some.** Um reset de configuração e o workflow deixa de valer.
-2. **Não é portátil.** Existe dentro de um agente, numa máquina.
-3. **Não sobrevive ao `/clear`.** Depois de limpar o contexto o agente esquece em que fase
-   o projeto está e volta a improvisar — normalmente escrevendo código que ninguém pediu.
-
-O Stilo Code transforma esse pipeline numa **máquina de estados gravada em disco**. Um
-arquivo de 6 linhas por projeto, lido automaticamente a cada início de sessão. Depois do
-`/clear`, o agente relê o disco e volta exatamente onde parou.
-
-## O pipeline
-
-```
+```text
 BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
 ```
 
-| Fase | Modelo | Artefato durável | Sai quando |
-|---|---|---|---|
-| `BRAINSTORM` | profundo | *(nenhum)* | você confirma o escopo |
-| `SPEC` | profundo | `spec.md` | a spec está aprovada |
-| `PLAN` | profundo | `plan.md` | o plano tem passos verificáveis |
-| `EXECUTE` | **rápido** | o código | todo passo feito e verificado |
-| `REVIEW` | profundo | `.stilo/review-NN.md` | o review está em arquivo |
-| `FIX` | profundo | código corrigido | todo achado resolvido |
-| `DONE` | — | — | review sem achado crítico nem alto |
+Cada projeto tem um arquivo `.stilo/state.json` com a fase atual e o número da revisão.
+Quando existem, os documentos de spec, plano, review e checkpoint guardam decisões e
+evidências. Ao retomar, o agente confere esse estado e os arquivos do projeto antes de
+continuar. O contexto da conversa não é a única fonte de continuidade.
 
-**Regra 0 — uma pasta por projeto.** **Regra 1 — nunca pular para a implementação:** um
-pedido pequeno ainda passa pelo pipeline, só que rápido.
+## Como funciona
 
-O estado fica em `<projeto>/.stilo/state.json`:
+Os hooks do plugin identificam o projeto e injetam as instruções e o estado nas sessões,
+mensagens e subagentes. O agente segue o pipeline e registra as transições de fase nos
+arquivos do projeto. Mensagens que começam com `/` passam pelo mesmo caminho; o Stilo não
+interpreta prompts como comandos que alteram arquivos.
 
-```json
-{
-  "version": 1,
-  "project": "meu-app",
-  "phase": "PLAN",
-  "reviewRound": 0,
-  "enxuto": "auto",
-  "updated": "2026-08-21T20:40:00Z"
-}
-```
+O ruleset completo está em [`AGENTS.md`](AGENTS.md). Não há comandos públicos ou skills
+invocáveis do Stilo: depois da instalação, a injeção é automática.
 
-### Modelo e esforço por tarefa
+## Hosts suportados
 
-A coluna "Modelo" é o alvo da sessão. Em `PLAN`, `EXECUTE`, `REVIEW` e `FIX`, o coordenador
-escolhe modelo e esforço para cada tarefa delegada conforme `modules/orquestracao.md`:
-classifica complexidade e risco, usa a menor combinação suportada que seja adequada e
-registra pedido e confirmação separadamente. Uma escolha explícita sua prevalece. Sem
-subagentes, as tarefas rodam em série; sem controle de modelo ou de esforço, a limitação é
-registrada, sem alegar troca. Falha de validação é diagnosticada antes de escalar; a
-escalada acontece uma vez, por falha de capacidade, nunca por falha de ambiente. Nada disso
-troca o modelo da sessão principal nem promete redução de custo ou latência.
+- **Claude Code:** instala os hooks `SessionStart`, `UserPromptSubmit` e `SubagentStart`.
+- **Codex:** usa o manifesto `.codex-plugin/plugin.json` e os mesmos hooks compartilhados.
+
+O Stilo Code dá suporte a esses dois hosts.
 
 ## Instalação
 
-Na primeira ativação suportada, o agente prepara o GitHub CLI (`gh`) fora dos hooks.
-Reutiliza uma versão existente; quando ausente, usa WinGet, Homebrew já instalado ou
-apt/dnf com pacote disponível e permissões permitidas. A instalação é confirmada por
-versão; no Windows, o PATH pode exigir nova janela. Login é uma etapa separada.
-O cliente não precisa executar scripts npm durante `/plugin install`.
-Falta de rede, gerenciador ou privilégio fica registrada sem bloquear o pipeline nem
-repetir automaticamente a tentativa. [Métodos, limites e retomada](docs/preparacao-github-cli.md).
-
-Na retomada, o agente compara estado, checkpoint e checkout antes de editar. Tarefas
-declaram também recursos exclusivos; reviews registram evidência, confiança e contraprova.
-[Avaliações reproduzíveis](docs/avaliacao-agente.md) distinguem testes locais de observação
-real; um subagente novo não comprova `/clear`. A política de modelo/esforço considera risco,
-preferências explícitas e capacidade disponível, sem alegar troca não confirmada.
-
 ### Claude Code
 
-```
+```text
 /plugin marketplace add luizgdemarchi/stilo-code
 /plugin install stilo-code@stilo-code
 ```
 
-Instala os três hooks (`SessionStart`, `UserPromptSubmit`, `SubagentStart`). Não há skills
-ou comandos públicos do Stilo; o estado é injetado sozinho, inclusive logo
-depois de um `/clear`.
-
 ### Codex
 
-Mesmo pacote, mesmo manifesto de hooks. Aponte o Codex para o repositório clonado; o
-`.codex-plugin/plugin.json` traz os hooks. O carregador do Codex fornece
-`CLAUDE_PLUGIN_ROOT` como alias compatível com o manifesto compartilhado.
+Clone este repositório e aponte o Codex para ele. O manifesto de hooks está em
+`.codex-plugin/plugin.json`.
 
-## Funcionamento automático
+## Detalhes e desenvolvimento
 
-Depois da instalação, os hooks detectam o projeto e injetam o estado e as instruções em
-cada sessão, mensagem e subagente. Mensagens comuns e prompts que começam com `/` seguem
-o mesmo caminho; nenhum texto de prompt altera arquivos.
+- [Retomada e preparação do GitHub CLI](docs/preparacao-github-cli.md)
+- [Avaliações de agentes](docs/avaliacao-agente.md)
+- [Critérios de aceite](docs/aceite.md)
 
-## Modo Enxuto
+Companions como `superpowers`, `ponytail`, `context7` e `playwright` são opcionais. O
+pipeline funciona sem eles. `AGENTS.md` é a fonte das regras; os módulos em `modules/`
+detalham as fases que precisam de instruções específicas.
 
-Mesma informação técnica, menos token. É regra de estilo da saída — sem proxy, sem
-runtime, sem interceptar nada, o que mantém o pacote portátil.
-
-```
-antes:  Perfeito, rodei os testes e fico feliz em informar que a grande maioria
-        passou. Foram 47 testes no total, dos quais 46 passaram e apenas 1 falhou.
-        O teste que falhou foi o `test_retry_backoff`, e a mensagem de erro
-        completa foi: `AssertionError: expected 3 retries, got 2`.
-
-depois: 46/47. `test_retry_backoff`: `AssertionError: expected 3 retries, got 2`.
-```
-
-Repare no que **não** mudou: os números, o nome do símbolo e a mensagem de erro literal.
-Negações, números, versões, blocos de código e mensagens de erro são travas de segurança —
-compressão nunca toca neles.
-
-O nível sai da fase: `off` em `BRAINSTORM`, `leve` em `SPEC` e `PLAN`, `pleno` em
-`EXECUTE`, `REVIEW` e `FIX`. O campo legado `enxuto` não sobrepõe a fase.
-
-Os hooks também compactam automaticamente o contexto por blocos prioritários. Essa
-compactação não resume texto e cai no contexto completo quando a validação falha.
-
-## Companions
-
-Nenhum é obrigatório. **O pipeline completa de ponta a ponta com zero companions
-instalados** — cada fase traz as próprias instruções, e a detecção é silenciosa: sem erro,
-sem aviso, sem pedir instalação.
-
-| Companion | Onde ajuda |
-|---|---|
-| `superpowers` | `BRAINSTORM`, `PLAN`, `EXECUTE` |
-| `ponytail` | `EXECUTE`, `FIX` — mantém o diff mínimo; `DONE` — auditoria opcional de simplificação |
-| `context7` (MCP) | `SPEC`, `PLAN` — docs atualizadas de biblioteca |
-| `playwright` (MCP) | `EXECUTE`, `REVIEW` — verificar em navegador de verdade |
-
-Só entram nessa lista pacotes que funcionam em Claude Code e em Codex: servidor MCP, ou repo
-com integração para os dois. Ferramenta presa a um só deles cria um pipeline que quebra ao
-trocar de agente — o problema que este pacote existe para resolver.
-
-### Auditoria opcional
-
-Depois de um `REVIEW/FIX` limpo, o agente pode oferecer uma auditoria consultiva de
-simplificação. Ela usa `ponytail-audit` quando já disponível ou as instruções internas
-quando não está. O resultado opcional é `.stilo/cleanup-NN.md`, com evidência, risco,
-remoção mínima e verificação por sugestão. A auditoria nunca apaga, move ou edita arquivos,
-nunca instala companion e não bloqueia `DONE`.
-
-## Idioma
-
-A fonte é toda em português. O ruleset instrui o agente a **responder no idioma em que
-você escrever** — escreveu em inglês, resposta em inglês.
-
-## Desenvolvimento
-
-```bash
-npm test          # node --test, zero dependências
-```
-
-`AGENTS.md` é a fonte única do ruleset.
-
-O checkout e a cópia instalada do plugin são estados distintos. Depois de alterar o
-checkout, rode `claude plugin validate .`; `claude plugin details stilo-code@stilo-code`
-mostra a cópia ativa. A instalação só recebe mudanças após uma nova instalação ou
-atualização autorizada.
-
-O teste de instruções exige que o contexto injetado de cada fase caiba em 19.500 caracteres
-ou seja o contexto completo (fallback). Ambiguidades com muitos projetos acrescentam texto proporcionalmente e
-continuam sendo reportadas pelo diagnóstico. `UserPromptSubmit` usa uma linha curta;
-`SessionStart` e `SubagentStart` carregam o ruleset necessário para manter `AGENTS.md`
-autossuficiente.
+Para desenvolvimento local, `npm test` executa os testes do projeto. A cópia instalada do
+plugin é separada deste checkout; alterações locais só chegam ao host após uma instalação
+ou atualização autorizada.
 
 ## Licença
 

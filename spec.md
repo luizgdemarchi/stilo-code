@@ -589,3 +589,58 @@ Codex, sem mudar o comportamento do pipeline nesses dois.
 | 52 | Manifestos de Claude Code e Codex válidos | `claude plugin validate .` e `tests/manifestos.test.js` |
 | 53 | Histórico preservado; critérios dependentes viram `retirado` | `node --test tests/diagnostics.test.js` e inventário |
 | 54 | Suíte completa passa sem dependência nova | `npm.cmd test` |
+
+## 19. Emenda — README orientado a entender o projeto
+
+Status: aprovada pelo usuário em 2026-10-25.
+
+### Problema e objetivo
+
+O README atual reúne apresentação do produto, regras do pipeline, detalhes de modelo,
+modo enxuto, companions, instalação e desenvolvimento com pesos semelhantes. Quem chega
+ao repositório para entender o que o Stilo Code faz precisa atravessar detalhes antes de
+formar um modelo simples do produto. Reorganizar os dois READMEs para explicar primeiro o
+produto, seu fluxo automático e o estado que persiste entre sessões. `README.md` permanece
+em pt-BR; `README.en.md` continua como tradução secundária equivalente.
+
+### Abordagem escolhida
+
+Visão geral primeiro: explicar o problema, o que o plugin faz, como o pipeline é retomado
+e quais hosts são suportados; apresentar instalação e links para detalhes depois. Guia
+rápido foi considerado, mas põe instalação antes da compreensão do produto. Referência
+completa foi considerada, mas mantém o excesso de detalhe no caminho principal.
+
+### Requisitos
+
+1. A abertura de cada README identifica Stilo Code como plugin de Claude Code e Codex,
+   explica que persiste o estado do projeto e retoma o pipeline automaticamente.
+2. O leitor encontra um resumo visual/textual do fluxo BRAINSTORM → SPEC → PLAN → EXECUTE
+   → REVIEW ⇄ FIX → DONE e entende que o estado por projeto permite retomar após limpar
+   o contexto.
+3. A instalação permanece disponível para ambos os hosts, depois da explicação do produto.
+   Informações detalhadas podem apontar para documentos já existentes.
+4. As duas versões têm a mesma hierarquia e sequência de assuntos, em seus respectivos
+   idiomas, e links cruzados entre si.
+5. Claims sobre hosts, hooks, ausência de comandos/skills públicos, companions opcionais
+   e comportamento do pipeline permanecem coerentes com esta spec, `AGENTS.md` e os
+   manifestos publicados. Não anunciar suporte a outros agentes.
+6. Não alterar código, hooks, manifestos, instalação, configuração ou comportamento do
+   plugin; não criar dependências nem novos comandos.
+
+### Critérios de aceite
+
+| # | Critério | Verificação |
+|---|---|---|
+| 55 | A abertura identifica o produto como plugin para Claude Code e Codex e resume sua função | `Select-String -TotalCount 20` nos dois READMEs; buscar também os nomes dos dois hosts |
+| 56 | Ambos apresentam o pipeline em ordem e explicam estado persistido e retomada após `/clear` | `rg -n 'BRAINSTORM|SPEC|PLAN|EXECUTE|REVIEW|FIX|DONE|state.json|/clear' README.md README.en.md` |
+| 57 | A instalação vem depois da visão geral e descreve os dois hosts | `rg -n '^##|Claude Code|Codex|plugin install|marketplace' README.md README.en.md` e comparar com os manifestos |
+| 58 | Os títulos principais têm correspondência e ordem equivalente nos dois idiomas | `rg -n '^## ' README.md README.en.md` e comparar as seções correspondentes |
+| 59 | Links internos dos READMEs apontam para arquivos existentes | extrair destinos Markdown e verificar cada caminho relativo com `Test-Path` |
+| 60 | Só os READMEs são alterados, não há host retirado anunciado e o diff não tem whitespace inválido | `git diff --name-only`, `rg` pelos nomes retirados e `git diff --check` |
+
+### Não objetivos e fora de escopo
+
+- Redesenhar o workflow do Stilo ou alterar a fonte de regras `AGENTS.md`.
+- Atualizar hooks, manifestos, adaptadores, instalação ou pacote publicado.
+- Remover detalhes históricos ou editar documentos ligados pelo README.
+- Publicar, instalar ou atualizar a cópia do plugin.

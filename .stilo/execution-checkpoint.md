@@ -208,3 +208,14 @@ Este bloco substitui as próximas ações históricas acima.
 - Pendentes vivos: 2, 4, 5, 12, 14, 17, 28–32, 36, 37, 38, 45–47. Próxima ação: audit completo
   de segurança com `~/.agents/skills/security-audit` (perfil standard, só código-fonte; sem
   sandbox de SO no host).
+
+## Sessão 2026-10-25 — README overview-first (SPEC)
+
+- Escopo confirmado: explicar primeiro o que o Stilo Code faz; manter README.md em pt-BR e README.en.md como tradução equivalente.
+- Abordagem escolhida: visão geral primeiro; instalação e referência depois.
+- SPEC aprovada em `spec.md` § 19; plano serial em `plan.md` aprovado pelo usuário em 2026-10-25.
+- T01–T03 executadas; validações estáticas dos dois READMEs concluídas, sem executar código ou testes do repositório.
+- Review-19 encontrou um achado menor: indicar que os documentos/checkpoints podem não existir; correção aplicada nos dois READMEs.
+- Achado 1 do review-19 corrigido em `README.md` e `README.en.md`; docs de continuidade agora são explicitamente condicionais, e a abertura distingue fase persistida de decisões registradas nos documentos.
+- `review-20`: zero achados; critérios 55–60 atendidos. Links relativos válidos, seções equivalentes, nenhum host retirado anunciado e `git diff --check` sem erros.
+- Fase: DONE; `reviewRound: 20`. Não foram executados código ou testes do repositório.

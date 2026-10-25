@@ -2,6 +2,63 @@
 
 # Stilo Code — Plano de Implementação
 
+## Emenda ativa (2026-10-25) — README overview-first
+
+**Objetivo:** reorganizar `README.md` e `README.en.md` para que quem chega ao projeto
+entenda o que o Stilo Code faz antes dos detalhes de instalação e referência. Escopo e
+critérios em `spec.md` § 19; plano aprovado pelo usuário em 2026-10-25. Esta emenda
+substitui o escopo histórico do Passo 14 apenas para este ciclo. Não publicar.
+
+**Arquitetura:** dois documentos equivalentes, português como fonte e inglês como
+tradução, com a mesma ordem de assuntos: resumo, problema, fluxo e estado persistido,
+funcionamento automático, hosts suportados, instalação, detalhes opcionais e links de
+referência. Os critérios 55–60 ficam registrados na spec; validar evidência sem alterar
+outros arquivos do produto.
+
+**Stack:** Markdown; verificações estáticas com `rg`, `Test-Path` e `git diff --check`.
+Não executar código do repositório nem testes.
+
+### Tarefas
+
+**T01 — Reescrever README em português**
+
+- Especialista: documentação
+- Files: `README.md`
+- Depends-on: nenhum
+- Resources: nenhum
+- Execução: abrir com definição direta do produto e seu benefício; explicar o fluxo de
+  sete fases, estado por projeto e retomada; depois apresentar operação automática,
+  suporte a Claude Code/Codex e instalação. Preservar links úteis e claims compatíveis
+  com a spec. Não anunciar hosts removidos.
+- Verificação: conferir ordem de títulos e primeiros 20 linhas; buscar fases, estado,
+  `/clear`, ambos os hosts e destinos dos links.
+
+**T02 — Reescrever README em inglês**
+
+- Especialista: documentação
+- Files: `README.en.md`
+- Depends-on: T01
+- Resources: nenhum
+- Execução: traduzir a estrutura e o conteúdo de T01 para inglês, preservando equivalência
+  dos tópicos, links cruzados e nomes técnicos.
+- Verificação: comparar títulos em ordem com T01; conferir fases, estado, `/clear`, hosts e
+  destinos dos links.
+
+**T03 — Verificar o conjunto**
+
+- Especialista: documentação
+- Files: `README.md`, `README.en.md`
+- Depends-on: T01, T02
+- Resources: nenhum
+- Execução: validar os critérios 55–60 conforme `spec.md` § 19 e registrar a evidência no
+  review desta rodada, sem ampliar os arquivos alterados.
+- Verificação: executar buscas e checagem de links previstas pelos critérios 55–60;
+  confirmar `git diff --check` e que os únicos arquivos de produto alterados são os dois
+  READMEs.
+
+**Ordem:** T01 → T02 → T03, serial por dependência. O coordenador edita e revisa sem
+delegação. Ao fim, gravar evidências dos critérios em `docs/aceite.md` e solicitar REVIEW.
+
 > **Ciclo atual (2026-10-24):** suporte apenas a Claude Code e Codex, conforme `spec.md` § 18.
 > Plano: `docs/superpowers/plans/2026-10-24-apenas-claude-codex-plan.md`.
 
