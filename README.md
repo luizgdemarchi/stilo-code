@@ -11,18 +11,20 @@ agente retome o trabalho mesmo depois de uma nova sessão ou de limpar o context
 ## O que o Stilo Code faz
 
 O Stilo conduz o trabalho por etapas: entender o pedido antes de propor, registrar o que
-deve ser feito, planejar como, executar e revisar. A execução só começa depois da
-aprovação da spec e do plano. Se a revisão encontrar problemas, o agente corrige e revisa
-de novo.
+deve ser feito, planejar como, executar, revisar a implementação e corrigir os achados.
+Depois, uma fase editorial separada percorre todo o texto mantido no repositório, aponta
+padrões no contexto e registra correções mínimas; ela preserva a voz e não tenta inferir
+se o texto foi escrito por IA. O agente aplica as correções e repete a revisão editorial.
 
 ```text
-BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
+BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → EDITORIAL_REVIEW ⇄ EDITORIAL_FIX → DONE
 ```
 
-Cada projeto tem um arquivo `.stilo/state.json` com a fase atual e o número da revisão.
-Quando existem, os documentos de spec, plano, review e checkpoint guardam decisões e
-evidências. Ao retomar, o agente confere esse estado e os arquivos do projeto antes de
-continuar. O contexto da conversa não é a única fonte de continuidade.
+Cada projeto tem um arquivo `.stilo/state.json` com a fase atual e contadores separados para
+as revisões técnica e editorial. Quando existem, os documentos de spec, plano, review,
+revisão editorial e checkpoint guardam decisões e evidências. Ao retomar, o agente confere
+esse estado e os arquivos do projeto antes de continuar. O contexto da conversa não é a
+única fonte de continuidade.
 
 ## Como funciona
 

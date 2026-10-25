@@ -21,6 +21,8 @@ const PROXIMA_ACAO = {
   EXECUTE: 'seguir plan.md na ordem, verificando cada passo',
   REVIEW: 'revisar o diff contra spec.md e plan.md e gravar .stilo/review-NN.md',
   FIX: 'resolver cada achado do review mais recente e voltar para REVIEW',
+  EDITORIAL_REVIEW: 'revisar todo o texto mantido e gravar .stilo/editorial-review-NN.md',
+  EDITORIAL_FIX: 'resolver os achados editoriais e voltar para EDITORIAL_REVIEW',
   DONE: 'oferecer auditoria opcional de simplificação ou seguir para encerramento',
 };
 
@@ -31,6 +33,8 @@ const MODELO_ALVO = {
   EXECUTE: 'rápido',
   REVIEW: 'profundo',
   FIX: 'profundo',
+  EDITORIAL_REVIEW: 'profundo',
+  EDITORIAL_FIX: 'profundo',
   DONE: 'profundo',
 };
 
@@ -159,8 +163,11 @@ function diagnosticoEstado(state, caminhos) {
 function modulosDaFase(state) {
   const modulos = [];
   if (resolveEnxuto(state) !== 'off') modulos.push('enxuto.md');
-  if (['PLAN', 'EXECUTE', 'REVIEW', 'FIX'].includes(fase(state))) modulos.push('orquestracao.md');
+  if (['PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'EDITORIAL_REVIEW', 'EDITORIAL_FIX'].includes(fase(state))) {
+    modulos.push('orquestracao.md');
+  }
   if (fase(state) === 'REVIEW') modulos.push('revisor.md');
+  if (['EDITORIAL_REVIEW', 'EDITORIAL_FIX'].includes(fase(state))) modulos.push('revisor-editorial.md');
   if (fase(state) === 'DONE') modulos.push('auditoria.md');
   return modulos;
 }
@@ -258,7 +265,7 @@ function blocoEstado(state, caminhos) {
       `- **Projeto:** ${sanitiza(state.project) || 'sem-nome'}`,
       `- **Fase:** valor inválido no \`state.json\`: \`"${invalida}"\``,
       '',
-      'Fases válidas: `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `DONE`.',
+      'Fases válidas: `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `EDITORIAL_REVIEW`, `EDITORIAL_FIX`, `DONE`.',
       'Diga isso ao usuário e pergunte em que fase o projeto está antes de agir. Não',
       'adivinhe a fase, e não recomece o projeto.',
     ].join('\n');
@@ -280,6 +287,14 @@ function blocoEstado(state, caminhos) {
       f === 'REVIEW'
         ? `- **Rodada de review:** a próxima grava \`.stilo/review-${String(rodada + 1).padStart(2, '0')}.md\``
         : `- **Rodada de review:** corrigir os achados de \`.stilo/review-${String(rodada).padStart(2, '0')}.md\``
+    );
+  }
+  if (f === 'EDITORIAL_REVIEW' || f === 'EDITORIAL_FIX') {
+    const rodada = Number(state.editorialReviewRound) || 0;
+    linhas.push(
+      f === 'EDITORIAL_REVIEW'
+        ? `- **Rodada editorial:** a próxima grava \`.stilo/editorial-review-${String(rodada + 1).padStart(2, '0')}.md\``
+        : `- **Rodada editorial:** corrigir os achados de \`.stilo/editorial-review-${String(rodada).padStart(2, '0')}.md\``
     );
   }
   if (state.updated) linhas.push(`- **Atualizado em:** ${sanitiza(state.updated, 40)}`);

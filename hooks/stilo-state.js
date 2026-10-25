@@ -12,7 +12,10 @@ const path = require('path');
 const STATE_DIR = '.stilo';
 const STATE_FILE = 'state.json';
 
-const FASES = ['BRAINSTORM', 'SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'];
+const FASES = [
+  'BRAINSTORM', 'SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX',
+  'EDITORIAL_REVIEW', 'EDITORIAL_FIX', 'DONE',
+];
 const NIVEIS = ['off', 'leve', 'pleno'];
 const ENXUTO_VALIDOS = ['auto', ...NIVEIS];
 
@@ -24,6 +27,8 @@ const ENXUTO_POR_FASE = {
   EXECUTE: 'pleno',
   REVIEW: 'pleno',
   FIX: 'pleno',
+  EDITORIAL_REVIEW: 'pleno',
+  EDITORIAL_FIX: 'pleno',
   DONE: 'off',
 };
 
@@ -159,6 +164,10 @@ function validateState(state) {
   }
   if (!Number.isInteger(state.reviewRound) || state.reviewRound < 0) {
     errors.push('reviewRound deve ser um inteiro não negativo');
+  }
+  if (state.editorialReviewRound !== undefined &&
+      (!Number.isInteger(state.editorialReviewRound) || state.editorialReviewRound < 0)) {
+    errors.push('editorialReviewRound deve ser um inteiro não negativo');
   }
   if (state.enxuto !== undefined && (typeof state.enxuto !== 'string' || !ENXUTO_VALIDOS.includes(state.enxuto))) {
     errors.push(`enxuto deve ser um de: ${ENXUTO_VALIDOS.join(', ')}`);

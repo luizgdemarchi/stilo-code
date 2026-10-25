@@ -219,3 +219,50 @@ Este bloco substitui as próximas ações históricas acima.
 - Achado 1 do review-19 corrigido em `README.md` e `README.en.md`; docs de continuidade agora são explicitamente condicionais, e a abertura distingue fase persistida de decisões registradas nos documentos.
 - `review-20`: zero achados; critérios 55–60 atendidos. Links relativos válidos, seções equivalentes, nenhum host retirado anunciado e `git diff --check` sem erros.
 - Fase: DONE; `reviewRound: 20`. Não foram executados código ou testes do repositório.
+
+## Novo ciclo — revisão editorial integral no pipeline
+
+- Escopo confirmado: revisão editorial separada, cobrindo todo o texto mantido no repositório.
+- Abordagem confirmada: ciclo editorial próprio depois do review técnico, com fases, relatório e contador independentes.
+- Spec em `spec.md` § 20 aprovada; plano serial aprovado e implementação em andamento.
+
+- Plano serial em `plan.md`, seção da emenda editorial, aprovado pelo usuário; execução em worktree.
+- Verificações previstas: sintaxe JavaScript, whitespace e inspeção textual; testes não serão adicionados nem executados neste ciclo.
+- E01–E04 não executados: exigem sessão de agente avaliado; o avaliador disponível cobre outra fixture e não comprova a nova política editorial.
+- Worktree: `C:\Users\luizg\.codex\worktrees\c789\stilo-code`, branch `feat/revisao-editorial-integral`; base igual a `origin/main` em `2b3788fe7f8fb2a251a13826dcd612f2a26b5975`.
+- O usuário autorizou fast-forward em `main` e push a `origin/main` depois de review limpo; instalação e deploy continuam fora do escopo.
+
+## Execução T01–T04
+
+- Fases `EDITORIAL_REVIEW`/`EDITORIAL_FIX` adicionadas ao ruleset e ao estado; `editorialReviewRound` opcional em estados antigos e zero em estados novos.
+- Módulo editorial separado define inventário integral, exclusões, leitura contextual, relatório e ciclo de correção.
+- READMEs pt-BR/en-US mostram o mesmo fluxo de nove fases e contadores separados.
+- `node --check hooks/stilo-state.js`: passou. `node --check hooks/stilo-instructions.js`: passou.
+- `git diff --check`: passou; Git só avisou que normalizará CRLF de `plan.md` em uma próxima gravação.
+- Critérios 61–68 conferidos estaticamente nos arquivos de estado, instruções, módulo e READMEs. Sem teste de cliente ou `/clear`.
+- Testes não foram adicionados nem executados; E01–E04 não executados, conforme registrado no plano.
+- Estado inicial desta retomada em `REVIEW`, `reviewRound: 20`; próxima revisão técnica: `.stilo/review-21.md`.
+
+## Retorno a PLAN — artefato editorial ignorado
+
+- Antes de criar o review, conferi que `.gitignore` ignora `.stilo/*` e só permite `review-*.md`; `.stilo/editorial-review-NN.md` ficaria fora do histórico versionado.
+- Review independente foi interrompido antes de produzir relatório. T01/T03 e verificações locais permanecem; T02/T04 precisam da exceção e conferência de ignore.
+- Estado retornou a `PLAN`, `reviewRound: 20`. Plano atualizado para incluir `.gitignore`; aguardando aprovação antes de continuar.
+
+- Usuário aprovou o plano atualizado. `.gitignore` agora permite `editorial-review-*.md`; execução retomada em `EXECUTE`.
+### Execução retomada — verificação do allowlist
+
+- `git check-ignore --quiet .stilo/editorial-review-01.md`: não ignorado.
+- `git check-ignore --quiet .stilo/checkpoint.json`: continua ignorado.
+- `node --check hooks/stilo-state.js` e `node --check hooks/stilo-instructions.js`: passaram.
+- `git diff --check`: passou; aviso informativo de normalização CRLF em `plan.md`.
+- Sem testes executados; E01–E04 continuam sem avaliação independente.
+- T02 e T04 concluídas; estado avança para REVIEW round 21.
+
+### Review técnico e fechamento do ciclo de implementação
+
+- `.stilo/review-21.md`: revisão técnica do snapshot contra os critérios 61–68; zero achados.
+- A revisão delegada não concluiu; o coordenador fez e registrou a leitura técnica. Portanto, não há confirmação de revisão independente.
+- A limpeza editorial deste próprio repositório permanece fora do escopo aprovado na spec § 20; não foi executada neste ciclo.
+- Estado do projeto: `DONE`, `reviewRound: 21`, `editorialReviewRound: 0`. Esse fechamento segue o escopo aprovado para a implementação e não afirma que a fase editorial do produto tenha sido executada no repositório.
+- Verificações estáticas passaram; testes e E01–E04 não foram executados.

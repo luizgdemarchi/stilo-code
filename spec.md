@@ -644,3 +644,78 @@ completa foi considerada, mas mantém o excesso de detalhe no caminho principal.
 - Atualizar hooks, manifestos, adaptadores, instalação ou pacote publicado.
 - Remover detalhes históricos ou editar documentos ligados pelo README.
 - Publicar, instalar ou atualizar a cópia do plugin.
+
+## 20. Emenda — revisão editorial integral no pipeline
+
+Status: aprovada pelo usuário em 2026-10-25. Worktree local, fast-forward em `main` e push a `origin/main` autorizados após review limpo.
+
+### Problema e objetivo
+
+O pipeline revisa o diff técnico, mas não tem um ciclo próprio para encontrar padrões
+editoriais artificiais no texto mantido de um projeto. Incluir uma revisão editorial
+separada, em todos os projetos Stilo, depois do ciclo técnico e antes de `DONE`, cobrindo
+todo o texto mantido no repositório.
+
+### Abordagem escolhida
+
+Adicionar as fases `EDITORIAL_REVIEW` e `EDITORIAL_FIX`, com contador independente
+`editorialReviewRound` e relatórios `.stilo/editorial-review-NN.md`. O ciclo técnico
+`REVIEW`/`FIX` mantém seu relatório e contador atuais. A revisão editorial não modifica
+arquivos; `EDITORIAL_FIX` aplica as correções mínimas e atualiza cada achado. Uma nova
+rodada editorial cobre novamente todo o texto mantido. Projetos sem texto elegível
+registram cobertura vazia e seguem adiante.
+
+### Requisitos
+
+1. O fluxo passa de `REVIEW`/`FIX` limpo para `EDITORIAL_REVIEW`, alterna entre
+   `EDITORIAL_REVIEW` e `EDITORIAL_FIX` enquanto houver achados editoriais críticos ou
+   altos, e só então chega a `DONE`.
+2. Fases, retomada, estado válido, contexto injetado, instruções, documentação e ambos os
+   hosts suportados reconhecem o ciclo editorial e seu contador sem alterar a numeração
+   técnica existente.
+3. Cada relatório editorial registra inventário/cobertura e exclusões, padrões
+   encontrados com trecho e localização, contexto que justifica o achado, correção mínima
+   proposta, gravidade, confiança e estado. Nunca sobrescreve uma rodada anterior.
+4. A cobertura inclui prosa mantida em documentação, interface, comentários, docstrings e
+   demais textos autorais do projeto. Exclui binários, artefatos gerados, dependências de
+   terceiros, evidências e registros históricos, dados e formatos machine-readable; o
+   relatório declara exclusões e limitações.
+5. A análise contextual procura construções como contrastes binários, aberturas vazias,
+   falsos insights, puffery, atribuições vagas, metadiscurso, verbos genéricos, repetição
+   artificial, fragmentação dramática e fechos artificiais. Uma palavra ou padrão isolado
+   não basta para um achado.
+6. `EDITORIAL_REVIEW` não reescreve arquivos nem tenta inferir autoria por IA. A correção
+   preserva voz, sentido, fatos, precisão, nomes, contratos, placeholders e exemplos
+   intencionais; toda alteração tem justificativa contextual e é mínima.
+7. `EDITORIAL_FIX` marca cada achado como corrigido (com localização da mudança) ou
+   descartado (com motivo). `DONE` exige uma rodada editorial sem achados críticos ou
+   altos e a resolução justificada dos achados anteriores.
+8. A auditoria opcional de simplificação continua depois de `DONE`; não se mistura ao
+   relatório editorial nem altera seu ciclo.
+
+### Critérios de aceite
+
+| # | Critério | Verificação |
+|---|---|---|
+| 61 | Estados e transições editoriais estão documentados e aceitos pelo leitor/gravador de estado | inspeção das fases em `AGENTS.md`, `hooks/stilo-state.js` e `hooks/stilo-instructions.js` |
+| 62 | A fase editorial injeta seu módulo; fases não editoriais não carregam esse módulo | inspeção de `modulosDaFase()` e da montagem de contexto |
+| 63 | Contador editorial e nomes de relatório avançam independentemente de `reviewRound` | percorrer as regras de retomada e exemplos de estado/relatório |
+| 64 | Relatório documenta cobertura, exclusões, evidência contextual e estados de correção | conferir template em `modules/revisor-editorial.md` |
+| 65 | Política protege voz, fatos, contratos e conteúdo intencional, sem alegar detectar autoria | buscar as regras correspondentes nos documentos publicados |
+| 66 | `DONE` requer ciclos técnico e editorial limpos; auditoria de simplificação permanece opcional depois | conferir critérios de saída em `AGENTS.md` e `modules/auditoria.md` |
+| 67 | Documentação em português e inglês descreve o fluxo equivalente e só os dois hosts publicados | conferir títulos/descrição em `README.md` e `README.en.md` |
+| 68 | Não há comando, skill, dependência ou mecanismo de substituição em massa novo | inventário de manifestos, `package.json` e diff |
+
+### Não objetivos e fora de escopo
+
+- Fazer a limpeza editorial deste próprio repositório como parte desta implementação.
+- Alterar o review técnico ou misturar achados editoriais em `.stilo/review-NN.md`.
+- Fazer detecção de autoria, substituição automática em massa ou adicionar dependências.
+- Alterar publicação, instalação, hosts suportados ou auditoria opcional de simplificação.
+
+### Autorização posterior do usuário — integração e push
+
+Em 2026-10-25, o usuário autorizou expressamente criar uma worktree local, integrar o
+resultado revisado em `main` e enviá-lo a `origin/main` depois do review limpo. Esta
+autorização substitui a restrição anterior de publicação apenas para esse push. Instalação
+do plugin e deploy continuam fora do escopo.

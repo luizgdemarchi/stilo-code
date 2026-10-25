@@ -9,3 +9,4 @@ node_modules/
 .stilo/*
 # Reviews sao artefato duravel do projeto (spec.md § 4): versionados.
 !.stilo/review-*.md
+!.stilo/editorial-review-*.md

@@ -378,3 +378,128 @@ Vale gastar mais tempo nele do que em qualquer outro.
 | `AGENTS.md` grande demais e caro de injetar | Passa de ~8 KB | Mover detalhe para `modules/`, deixando no ruleset só o que toda fase precisa |
 | Formato de adaptador (Cursor/Kiro/Qoder) errado | — | Conferir contra superpowers 6.3.0 e ponytail 4.8.4 em cache, que já os enviam |
 | Descoberta de estado erra com vários projetos | Teste do Passo 7 | Ambiguidade é reportada ao agente, nunca resolvida por chute |
+
+## Emenda ativa (2026-10-25) — revisão editorial integral no pipeline
+
+**Objetivo:** acrescentar um ciclo editorial próprio entre o ciclo técnico e `DONE`, cobrindo todo o texto mantido sem inferir autoria por IA. Requisitos e aceite em `spec.md` § 20, aprovado pelo usuário em 2026-10-25.
+
+**Arquitetura:** duas fases (`EDITORIAL_REVIEW`, `EDITORIAL_FIX`), módulo próprio, relatório `.stilo/editorial-review-NN.md` e contador `editorialReviewRound` independente. O contador é opcional nos estados antigos e ausência equivale a zero; estados novos registram zero. Alterar o ruleset, o leitor de estado/contexto, o módulo editorial e os READMEs em português/inglês. Execução serial; sem dependência, comando, skill ou edição em massa nova.
+
+**Stack:** Markdown e JavaScript CommonJS já usados pelo Stilo. Verificações estáticas: `node --check`, `git diff --check` e buscas `rg`. Não criar nem executar testes neste ciclo.
+
+**Spec:** `spec.md` § 20.
+
+### Restrições globais
+
+- O `REVIEW`/`FIX` técnico e `reviewRound` permanecem independentes.
+- Todo ciclo editorial cobre todo o texto mantido; relata inventário, exclusões e limitações.
+- Histórico, evidências, arquivos gerados, dependências de terceiros, binários e formatos machine-readable ficam fora.
+- Revisão editorial não edita arquivos; correções mínimas ocorrem em `EDITORIAL_FIX`.
+- Preservar voz, sentido, fatos, precisão, nomes, contratos, placeholders e exemplos intencionais.
+- Nunca alegar detecção de autoria por IA; não adicionar comandos, skills, dependências ou substituição em massa.
+- Publicação, instalação e alteração do plugin instalado ficam fora do ciclo.
+
+### Foco de revisão
+
+- Contador editorial ausente em projetos antigos: deve valer zero, sem invalidar o estado.
+- Contador técnico e editorial avançam separadamente: cada um deve apontar para seu próprio relatório.
+- Repositório sem prosa elegível: deve registrar cobertura vazia e permitir seguir para `DONE`.
+- Padrão citado em exemplo, contrato ou texto deliberadamente estilizado: só vira achado se o contexto demonstrar problema.
+- Números, nomes, precisão, placeholders, fatos e sentido: correções não podem alterá-los.
+
+### Tarefas
+
+### Task 1: Integrar fases e estado editorial
+
+- **ID:** T01
+- **Descrição:** integrar as fases editoriais ao estado persistido, instruções e transições do pipeline.
+- **Especialista:** instruções e estado
+- **Files:** `AGENTS.md`; `hooks/stilo-state.js`; `hooks/stilo-instructions.js`
+- **Depends-on:** nenhum
+- **Resources:** nenhum
+- **Interfaces:** acrescentar `EDITORIAL_REVIEW` e `EDITORIAL_FIX`; aceitar `editorialReviewRound` opcional como inteiro não negativo, tratando ausência como zero; mapear ação, modelo, modo enxuto, contexto e número do relatório por fase. Fluxo técnico limpo segue para revisão editorial; editorial limpo segue para `DONE`.
+- [x] Atualizar fases, transições, tabela, saída e instruções de retomada em `AGENTS.md`.
+- [x] Estender enumeração/validação em `hooks/stilo-state.js` preservando estados antigos sem o contador.
+- [x] Atualizar ação seguinte, alvo de modelo, módulo carregado, fases válidas e contador exibido em `hooks/stilo-instructions.js`.
+- [x] Conferir por `rg` todos os usos de `REVIEW`, `FIX`, `DONE`, `reviewRound` e `FASES` nesses arquivos; confirmar os dois ciclos e ausência de colisão dos contadores.
+
+### Task 2: Definir revisão e correção editorial
+
+- **ID:** T02
+- **Descrição:** definir o método contextual, cobertura e ciclo de achados editoriais.
+- **Especialista:** revisão editorial
+- **Files:** `.gitignore`; `modules/revisor-editorial.md`; `AGENTS.md`
+- **Depends-on:** T01
+- **Resources:** nenhum
+- **Interfaces:** módulo acionado em `EDITORIAL_REVIEW` e `EDITORIAL_FIX`; relatório `.stilo/editorial-review-NN.md`, numerado por `editorialReviewRound`.
+- [x] Criar checklist contextual para contraste binário, aberturas vazias, falso insight, puffery, atribuição vaga, metadiscurso, verbos genéricos, repetição, fragmentação, fechos e formatação artificiais.
+- [x] Definir inventário de cobertura, categorias elegíveis, exclusões, limitações e template do relatório; cada achado cita padrão, trecho, arquivo/linha, contexto, gravidade, confiança, correção mínima e estado.
+- [x] Definir `EDITORIAL_FIX`: corrigir ou descartar cada achado com justificativa; toda nova rodada reavalia o texto mantido integralmente.
+- [x] Confirmar que exemplos intencionais e sinais isolados não geram achados e que não há afirmação de autoria por IA.
+- [x] Permitir o versionamento de `.stilo/editorial-review-*.md` sem deixar de ignorar outros arquivos runtime em `.stilo/`.
+
+### Task 3: Atualizar apresentação do fluxo
+
+- **ID:** T03
+- **Descrição:** apresentar o ciclo editorial de forma equivalente nos dois READMEs.
+- **Especialista:** documentação
+- **Files:** `README.md`; `README.en.md`
+- **Depends-on:** T02
+- **Resources:** nenhum
+- **Interfaces:** versões equivalentes do pipeline de nove fases no idioma de cada README.
+- [x] Atualizar diagrama e explicação para mostrar ciclo técnico, ciclo editorial separado, retomada por estado e auditoria opcional depois de `DONE`.
+- [x] Preservar instalação, hosts suportados, links e sequência overview-first.
+- [x] Conferir equivalência de títulos/etapas e termos com `rg` e leitura lado a lado.
+
+### Task 4: Fechar evidência local e checkpoint
+
+- **ID:** T04
+- **Descrição:** conferir os artefatos do plano e registrar a evidência e as limitações da sessão.
+- **Especialista:** integração
+- **Files:** `.gitignore`; `AGENTS.md`; `hooks/stilo-state.js`; `hooks/stilo-instructions.js`; `modules/revisor-editorial.md`; `README.md`; `README.en.md`; `.stilo/execution-checkpoint.md`
+- **Depends-on:** T01, T02, T03
+- **Resources:** nenhum
+- [x] Rodar `node --check hooks/stilo-state.js` e `node --check hooks/stilo-instructions.js`; ambos devem encerrar com código zero.
+- [x] Rodar `git diff --check`; não deve haver erro de whitespace.
+- [x] Conferir que `.stilo/editorial-review-01.md` não é ignorado por `git check-ignore` e que outros arquivos runtime de `.stilo/` continuam ignorados.
+- [x] Conferir critérios 61–68 da spec com buscas `rg` e inspeção dos arquivos afetados; registrar cobertura e limitações no checkpoint.
+- [x] Não executar suíte de testes, publicar, instalar nem atualizar plugin durante a execução; push segue a autorização posterior após review limpo.
+
+### Ordem
+
+T01 → T02 → T03 → T04. Arquivos compartilhados por tarefas em sequência; sem paralelismo ou commits.
+
+### Riscos e respostas
+
+| Risco | Resposta |
+|---|---|
+| Estado antigo sem contador deixa de ser retomável | contador opcional com ausência tratada como zero |
+| Novo ciclo confunde número de review técnico | campos e prefixos de relatório separados |
+| Falso positivo altera texto intencional | contexto obrigatório, correção mínima e estado descartado com motivo |
+| Módulo aumenta contexto de outras fases | carregar somente nas duas fases editoriais |
+
+### Limite de avaliação do agente
+
+O módulo `modules/avaliacao.md` é aplicável por alterar instruções e orquestração. O roteiro E01–E04 depende de sessões de um agente avaliado; o avaliador existente só examina a fixture de isolamento por tenant e identidade. Não adaptar a fixture para fingir prova editorial: registrar E01–E04 como não executados neste ciclo, sem alegar validação de cliente ou `/clear`.
+
+### Autorização posterior — worktree, integração e push
+
+O usuário autorizou worktree local, fast-forward em `main` e push para `origin/main` após review limpo. Isso substitui a exclusão de commits/publicação acima somente para a integração deste ciclo; não autoriza instalação ou deploy.
+
+Esta autorização substitui a linha de ordem anterior que excluía commits: T01–T04 seguem sem commits; T05 captura os commits após review limpo e integra por fast-forward.
+
+### Task 5: Integrar e publicar o resultado revisado
+
+- **ID:** T05
+- **Descrição:** integrar em `main` e publicar em `origin/main` depois do review limpo.
+- **Especialista:** integração Git
+- **Files:** `.stilo/state.json`; `.stilo/execution-checkpoint.md`
+- **Depends-on:** T04 e ciclo `REVIEW`/`FIX` limpo
+- **Resources:** nenhum
+- [ ] Confirmar `origin/main`, estado limpo de `main` e ancestralidade fast-forward antes de integrar.
+- [ ] Capturar `HEAD` antes de cada commit e commitar os arquivos revisados em ordem serial.
+- [ ] Fazer fast-forward da `main` local para o commit revisado da worktree.
+- [ ] Fazer push somente para `origin main` e conferir que o SHA remoto coincide com o SHA local.
+- [ ] Registrar no checkpoint e na resposta o SHA enviado; não instalar nem atualizar o plugin.
+
+Ruling: `.gitignore` tinha `.stilo/*` sem exceção para relatórios editoriais; isso impediria versionar o artefato durável da spec. Voltar a `PLAN`, incluir a exceção exata e validar que o restante do runtime continua ignorado. O review independente foi interrompido antes de produzir relatório.

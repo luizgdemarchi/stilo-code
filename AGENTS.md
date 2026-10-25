@@ -13,10 +13,10 @@ Todo projeto novo ganha sua própria subpasta no workspace, com seu próprio
 Um pedido pequeno ainda passa pelo pipeline, só que rápido. Só se pula uma fase com
 autorização explícita do usuário para aquela tarefa — nunca por julgar o pedido simples.
 
-## 1. As sete fases
+## 1. As nove fases
 
 ```
-BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
+BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → EDITORIAL_REVIEW ⇄ EDITORIAL_FIX → DONE
 ```
 
 | # | Fase | Modelo | Artefato durável | Critério de saída |
@@ -28,7 +28,10 @@ BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
 | 5 | `REVIEW` | profundo | `.stilo/review-NN.md` | Review escrito em arquivo |
 | 6 | `FIX` | profundo | código corrigido | Todos os achados do review resolvidos |
 | — | *(loop)* | | | `REVIEW` → `FIX` → `REVIEW` até zero achados |
-| 7 | `DONE` | — | — | Review limpo: nenhum achado `crítico` nem `alto` |
+| 7 | `EDITORIAL_REVIEW` | profundo | `.stilo/editorial-review-NN.md` | Texto mantido revisado; cobertura, exclusões e achados registrados |
+| 8 | `EDITORIAL_FIX` | profundo | textos corrigidos | Achados editoriais corrigidos ou descartados com motivo |
+| — | *(loop)* | | | `EDITORIAL_REVIEW` → `EDITORIAL_FIX` → `EDITORIAL_REVIEW` até rodada sem achados `crítico` ou `alto` |
+| 9 | `DONE` | — | — | Reviews técnico e editorial limpos; sem achados `crítico` nem `alto` |
 
 ## 2. O que fazer em cada fase
 
@@ -74,7 +77,18 @@ aliases ou symlinks exigem conferência conservadora antes de delegar.
 **FIX** — resolver cada achado do review mais recente, marcando o estado de cada um no
 próprio arquivo de review. Depois voltar para `REVIEW`, incrementando `reviewRound`.
 
-**DONE** — após `REVIEW/FIX` limpo, ofereça uma auditoria opcional. Use `ponytail-audit` se
+**EDITORIAL_REVIEW** — depois do ciclo técnico limpo, revisar contextualmente todo o texto
+mantido no repositório, incluindo documentação, interface, comentários, docstrings e outros
+textos autorais. Registrar cobertura, exclusões, limitações e achados em
+`.stilo/editorial-review-NN.md`, com `NN` igual a `editorialReviewRound` + 1. Não editar
+arquivos nesta fase nem inferir autoria por IA. O módulo `modules/revisor-editorial.md`
+define os padrões e o formato do relatório.
+
+**EDITORIAL_FIX** — corrigir minimamente ou descartar cada achado editorial com motivo e
+atualizar o estado no relatório. Depois voltar para `EDITORIAL_REVIEW` e revisar novamente
+todo o texto mantido. Projetos sem texto elegível registram cobertura vazia.
+
+**DONE** — após `REVIEW/FIX` e `EDITORIAL_REVIEW/EDITORIAL_FIX` limpos, ofereça uma auditoria opcional. Use `ponytail-audit` se
 disponível; sem ele, siga `modules/auditoria.md`. Grave só recomendações em
 `.stilo/cleanup-NN.md`, sem comando/dependência, apagar, mover ou editar arquivos. Inclua
 evidência, risco, remoção, validação e classificação; áreas protegidas exigem confirmação.
@@ -88,12 +102,16 @@ Aceitação retorna a `FIX` → `REVIEW`; ignorar não bloqueia `DONE`
   "project": "meu-app",
   "phase": "PLAN",
   "reviewRound": 0,
+  "editorialReviewRound": 0,
   "enxuto": "auto",
   "updated": "2026-08-21T20:40:00Z"
 }
 ```
 
-`phase` é uma de `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `DONE`.
+`phase` é uma de `BRAINSTORM`, `SPEC`, `PLAN`, `EXECUTE`, `REVIEW`, `FIX`,
+`EDITORIAL_REVIEW`, `EDITORIAL_FIX`, `DONE`.
+`editorialReviewRound` é um inteiro não negativo opcional para compatibilidade com estados
+antigos; quando ausente, vale zero. Em estados novos, grave zero.
 `enxuto` é um campo legado opcional; o nível efetivo é sempre derivado da fase (§ 6).
 
 - **Escrever é sua responsabilidade.** Ao concluir uma fase, gravar o arquivo com a fase
@@ -103,7 +121,8 @@ Aceitação retorna a `FIX` → `REVIEW`; ignorar não bloqueia `DONE`
   git faz com `.git`. Se não achar, varrer **um** nível abaixo. Se achar mais de um,
   listar todos e perguntar ao usuário qual é — nunca adivinhar.
 - **Não achou nenhum:** é projeto novo. Criar a subpasta, criar
-  `<subpasta>/.stilo/state.json` em `phase: "BRAINSTORM"`, com `reviewRound: 0`, e
+  `<subpasta>/.stilo/state.json` em `phase: "BRAINSTORM"`, com `reviewRound: 0` e
+  `editorialReviewRound: 0`, e
   começar a fazer perguntas.
 
 ## Retomada verificável
@@ -138,7 +157,8 @@ token ou alterar contas. Sem gh, o pipeline continua; não criar projeto para pr
 Nenhum hook troca o modelo da sessão. Confira em que modelo você está rodando e avise o
 usuário **só quando houver divergência** — uma linha, sem insistir.
 
-A tabela abaixo define o alvo geral da sessão. Nas fases `PLAN`, `EXECUTE`, `REVIEW` e `FIX`,
+A tabela abaixo define o alvo geral da sessão. Nas fases `PLAN`, `EXECUTE`, `REVIEW`, `FIX`,
+`EDITORIAL_REVIEW` e `EDITORIAL_FIX`,
 a seleção por tarefa segue `modules/orquestracao.md`: avalia risco e complexidade, respeita a
 preferência explícita do usuário e registra pedido e confirmação separadamente. Nunca afirme
 que modelo ou esforço foi aplicado quando a ferramenta não confirmar.
@@ -156,8 +176,9 @@ gatilho vale.
 | Módulo | Carregar quando |
 |---|---|
 | `modules/enxuto.md` | Sempre que `enxuto` resolver para `leve` ou `pleno` |
-| `modules/orquestracao.md` | Fase `PLAN`, `EXECUTE`, `REVIEW` ou `FIX` |
+| `modules/orquestracao.md` | Fase `PLAN`, `EXECUTE`, `REVIEW`, `FIX`, `EDITORIAL_REVIEW` ou `EDITORIAL_FIX` |
 | `modules/revisor.md` | Fase `REVIEW` |
+| `modules/revisor-editorial.md` | Fase `EDITORIAL_REVIEW` ou `EDITORIAL_FIX` |
 | `modules/frontend.md` | `EXECUTE` ou `REVIEW`, **e** o diff toca interface de usuário |
 | `modules/autoria-skill.md` | `PLAN` ou `EXECUTE`, **e** o projeto **é** uma skill ou plugin de agente |
 | `modules/auditoria.md` | `DONE` após review limpo |
@@ -179,7 +200,7 @@ lê.
 |---|---|---|
 | `BRAINSTORM` | `off` | Explorar problema precisa de nuance e pergunta bem formulada |
 | `SPEC`, `PLAN` | `leve` | O documento é lido depois; corta enchimento, mantém frase inteira |
-| `EXECUTE`, `REVIEW`, `FIX` | `pleno` | Fases mecânicas: narração e cortesia são puro custo |
+| `EXECUTE`, `REVIEW`, `FIX`, `EDITORIAL_REVIEW`, `EDITORIAL_FIX` | `pleno` | Fases mecânicas: narração e cortesia são puro custo |
 | `DONE` | `off` | Não há mais trabalho a comprimir |
 
 O campo `enxuto` legado pode permanecer no `state.json`, mas não sobrepõe a tabela nem
@@ -223,7 +244,7 @@ Avise proativamente quando é seguro limpar o contexto — uma linha curta, no f
 `✅ Ponto seguro para /clear`.
 
 - **Seguro:** logo depois de um artefato durável ir para o disco — `spec.md`, `plan.md`,
-  código executado e verificado, `.stilo/review-NN.md`, correções aplicadas. Nesses
+  código executado e verificado, `.stilo/review-NN.md`, `.stilo/editorial-review-NN.md`, correções aplicadas. Nesses
   pontos o estado inteiro está em disco.
 - **Não seguro:** no meio de `BRAINSTORM`, `PLAN` ou `EXECUTE`, quando decisões ainda só
   existem na conversa.

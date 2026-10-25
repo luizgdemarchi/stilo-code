@@ -10,18 +10,21 @@ can resume work in a new session or after clearing the context with `/clear`.
 ## What Stilo Code does
 
 Stilo guides work through clear stages: understand the request before proposing a
-solution, record what should be done, plan how to do it, execute, and review. Execution
-starts only after the spec and plan are approved. If the review finds problems, the agent
-fixes them and reviews again.
+solution, record what should be done, plan how to do it, execute, review the implementation,
+and fix its findings. A separate editorial phase then reviews all maintained repository
+text in context and records minimal edits. It preserves the writer's voice and does not try
+to infer whether AI wrote the text. The agent applies the edits and repeats the editorial
+review.
 
 ```text
-BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → DONE
+BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → EDITORIAL_REVIEW ⇄ EDITORIAL_FIX → DONE
 ```
 
-Each project has a `.stilo/state.json` file with its current phase and review number. When
-present, the spec, plan, review, and checkpoint documents preserve decisions and evidence.
-When work resumes, the agent checks this state and the project files before continuing.
-Conversation context is not the only source of continuity.
+Each project has a `.stilo/state.json` file with its current phase and separate technical
+and editorial review counters. When present, the spec, plan, review, editorial review, and
+checkpoint documents preserve decisions and evidence. When work resumes, the agent checks
+this state and the project files before continuing. Conversation context is not the only
+source of continuity.
 
 ## How it works
 
