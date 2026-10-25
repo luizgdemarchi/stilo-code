@@ -496,10 +496,10 @@ Esta autorização substitui a linha de ordem anterior que excluía commits: T01
 - **Files:** `.stilo/state.json`; `.stilo/execution-checkpoint.md`
 - **Depends-on:** T04 e ciclo `REVIEW`/`FIX` limpo
 - **Resources:** nenhum
-- [ ] Confirmar `origin/main`, estado limpo de `main` e ancestralidade fast-forward antes de integrar.
-- [ ] Capturar `HEAD` antes de cada commit e commitar os arquivos revisados em ordem serial.
-- [ ] Fazer fast-forward da `main` local para o commit revisado da worktree.
-- [ ] Fazer push somente para `origin main` e conferir que o SHA remoto coincide com o SHA local.
-- [ ] Registrar no checkpoint e na resposta o SHA enviado; não instalar nem atualizar o plugin.
+- [x] Confirmar `origin/main`, estado limpo de `main` e ancestralidade fast-forward antes de integrar.
+- [x] Capturar `HEAD` antes do commit e commitar os arquivos revisados em ordem serial.
+- [x] Fazer fast-forward da `main` local para o commit revisado da worktree.
+- [x] Fazer push somente para `origin main` e conferir que o SHA remoto coincide com o SHA local.
+- [x] Registrar no checkpoint e na resposta o SHA enviado; não instalar nem atualizar o plugin.
 
 Ruling: `.gitignore` tinha `.stilo/*` sem exceção para relatórios editoriais; isso impediria versionar o artefato durável da spec. Voltar a `PLAN`, incluir a exceção exata e validar que o restante do runtime continua ignorado. O review independente foi interrompido antes de produzir relatório.

@@ -266,3 +266,9 @@ Este bloco substitui as próximas ações históricas acima.
 - A limpeza editorial deste próprio repositório permanece fora do escopo aprovado na spec § 20; não foi executada neste ciclo.
 - Estado do projeto: `DONE`, `reviewRound: 21`, `editorialReviewRound: 0`. Esse fechamento segue o escopo aprovado para a implementação e não afirma que a fase editorial do produto tenha sido executada no repositório.
 - Verificações estáticas passaram; testes e E01–E04 não foram executados.
+
+### Integração e publicação autorizadas
+
+- `main` foi fast-forwarded da base `2b3788fe7f8fb2a251a13826dcd612f2a26b5975` para o commit revisado `27691866c385d0024b000bdfcbde718b0785b579`.
+- Push realizado somente para `origin main`; `git ls-remote origin refs/heads/main` confirmou o mesmo SHA `27691866c385d0024b000bdfcbde718b0785b579`.
+- Nenhuma instalação ou deploy foi realizado.
