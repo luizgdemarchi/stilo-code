@@ -120,12 +120,15 @@ test('ruleset acima do orçamento compacta sem perder âncoras nem módulos', ()
   process.env.CLAUDE_PLUGIN_ROOT = raiz;
   try {
     const state = { version: 1, project: 'x', phase: 'EXECUTE', reviewRound: 0 };
+    const nucleo = buildInjectedContext(state, undefined, 'nucleo');
+    const daFase = buildInjectedContext(state, undefined, 'fase');
+    assert.ok(nucleo.length <= 10000, String(nucleo.length));
+    assert.doesNotMatch(nucleo, /Seção descartável/);
+    assert.strictEqual(daFase, buildFullContext(state, undefined, 'fase'));
     const injetado = buildInjectedContext(state);
-    assert.ok(injetado.length <= 19500, String(injetado.length));
-    assert.doesNotMatch(injetado, /Seção descartável/);
     for (const ancora of ANCORAS) assert.ok(injetado.includes(ancora), ancora);
     for (const nome of modulosDaFase(state)) {
-      for (const bloco of blocos(modulo(nome))) assert.ok(injetado.includes(bloco), nome);
+      for (const bloco of blocos(modulo(nome))) assert.ok(daFase.includes(bloco), nome);
     }
   } finally {
     if (anterior === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
@@ -162,11 +165,14 @@ for (const phase of FASES) test(`${phase} com checkpoint no limite cabe sem comp
       status: 'valid',
       setupNote: buildSetupNote(pluginRoot(), { status: 'absent' }),
     });
-    const completo = buildFullContext(state, caminhos);
-    const injetado = buildInjectedContext(state, caminhos);
-    assert.match(completo, /checkpoint/);
-    assert.strictEqual(injetado, completo);
-    assert.ok(injetado.length <= 19500, `${phase}: ${injetado.length}`);
+    assert.match(buildFullContext(state, caminhos, 'fase'), /checkpoint/);
+    for (const parte of ['nucleo', 'fase']) {
+      const completo = buildFullContext(state, caminhos, parte);
+      const injetado = buildInjectedContext(state, caminhos, parte);
+      const bytes = Buffer.byteLength(injetado, 'utf8');
+      assert.strictEqual(injetado, completo, `${phase} ${parte}`);
+      assert.ok(injetado.length <= 10000 && bytes <= 10000, `${phase} ${parte}: ${injetado.length} / ${bytes}`);
+    }
   } finally {
     fs.rmSync(projeto, { recursive: true, force: true });
   }

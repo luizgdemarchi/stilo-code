@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
@@ -24,6 +26,24 @@ test('Claude Code: deduplica por message.id e mede ferramentas, com mcp agrupado
   assert.strictEqual(resultado.ferramentas[0].percentual, 75);
   assert.strictEqual(resultado.linhasInvalidas, 1);
   assert.strictEqual(resultado.linhasDesconhecidas, 1);
+});
+
+test('formato novo: arquivo com linhas válidas e nenhuma chamada reconhecida é sinalizado', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'medir-formato-'));
+  const arquivo = path.join(dir, 'novo.jsonl');
+  fs.writeFileSync(arquivo, [
+    JSON.stringify({ type: 'response', message: { id: 'm1', usage: { input_tokens: 100, output_tokens: 20 } } }),
+    JSON.stringify({ type: 'assistant_v2', message: { id: 'm2', usage: { input_tokens: 50, output_tokens: 5 } } }),
+  ].join('\n'));
+  try {
+    const resultado = medir(arquivo);
+    assert.strictEqual(resultado.chamadas, 0);
+    assert.strictEqual(resultado.arquivosSemChamadas, 1);
+    assert.match(rodar(arquivo).stdout, /sem chamada reconhecida: 1/);
+    assert.strictEqual(medir(path.join(FIXTURES, 'claude.jsonl')).arquivosSemChamadas, 0);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('Codex: usa o último total acumulado e separa o cache da entrada', () => {

@@ -127,9 +127,29 @@ test('CLI retorna 0 para plano válido, 1 para erro de validação e 2 para uso 
   assert.strictEqual(erro.status, 1, erro.stdout + erro.stderr);
   assert.match(erro.stderr, /Plano inválido/i);
 
-  const uso = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8' });
+  // Sem argumento e sem projeto no diretório, não há plano ativo para validar.
+  const uso = spawnSync(process.execPath, [SCRIPT], { cwd: dir, encoding: 'utf8' });
   assert.strictEqual(uso.status, 2, uso.stdout + uso.stderr);
   assert.match(uso.stderr, /Uso:/i);
+
+  // Sem argumento num projeto com ciclo, valida o plan.md do ciclo ativo.
+  const projeto = path.join(dir, 'projeto');
+  const ciclo = path.join(projeto, 'docs', 'ciclos', '2026-11-02-x');
+  fs.mkdirSync(path.join(projeto, '.stilo'), { recursive: true });
+  fs.mkdirSync(ciclo, { recursive: true });
+  fs.writeFileSync(path.join(projeto, '.stilo', 'state.json'), JSON.stringify({
+    version: 1, project: 'p', phase: 'PLAN', cycle: '2026-11-02-x', reviewRound: 0,
+  }));
+  fs.copyFileSync(valido, path.join(ciclo, 'plan.md'));
+  const ativo = spawnSync(process.execPath, [SCRIPT], { cwd: projeto, encoding: 'utf8' });
+  assert.strictEqual(ativo.status, 0, ativo.stdout + ativo.stderr);
+  assert.match(ativo.stdout, /Plano válido.*1 tarefa/i);
+
+  // Trilha curta não tem plan.md: o script diz isso em vez de validar outro arquivo.
+  fs.writeFileSync(path.join(ciclo, 'ciclo.md'), '## Spec\n\n## Plano\n');
+  const curta = spawnSync(process.execPath, [SCRIPT], { cwd: projeto, encoding: 'utf8' });
+  assert.strictEqual(curta.status, 2, curta.stdout + curta.stderr);
+  assert.match(curta.stderr, /trilha curta/i);
 
   const ausente = spawnSync(process.execPath, [SCRIPT, path.join(dir, 'ausente.md')], { encoding: 'utf8' });
   assert.strictEqual(ausente.status, 2, ausente.stdout + ausente.stderr);

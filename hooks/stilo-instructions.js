@@ -10,7 +10,10 @@ const path = require('path');
 const { documentosDoCiclo, normalizeFase, readCheckpoint, resolveEnxuto } = require('./stilo-state.js');
 const { SEPARADOR, selectContextBlocks } = require('./stilo-context.js');
 
-const CONTEXT_BUDGET = 19500;
+// Limite de cada texto que um hook injeta. Acima dele, o Claude Code entrega ao
+// modelo só o caminho de um arquivo e uma prévia de 2.000 caracteres, e o Codex faz
+// o mesmo acima de ~2.500 tokens. Por isso o SessionStart sai em duas partes.
+const CONTEXT_BUDGET = 10000;
 
 // Próxima ação concreta de cada fase, com os documentos ativos do ciclo. É o
 // campo que impede o agente de retomar um projeto sabendo a fase mas não o que
@@ -422,16 +425,23 @@ function blocoEstado(state, caminhos) {
   return linhas.join('\n');
 }
 
-// Contexto completo para SessionStart e SubagentStart: ruleset + estado +
-// módulos que a fase pede.
-function buildFullContext(state, caminhos) {
-  const partes = [lerArquivo('AGENTS.md'), blocoEstado(state, caminhos)];
-  if (caminhos && caminhos.setupNote) partes.push(caminhos.setupNote);
-  for (const modulo of modulosDoContexto(state, caminhos)) {
-    const texto = lerArquivo('modules', modulo);
-    if (texto) partes.push(texto);
-  }
-  return partes.filter(Boolean).join(SEPARADOR);
+// Partes do SessionStart, cada uma num comando de hook: o núcleo (ruleset e nota
+// do gh) e a fase (bloco de estado e módulos que a fase pede).
+function partesDoContexto(state, caminhos) {
+  return {
+    nucleo: [lerArquivo('AGENTS.md'), caminhos && caminhos.setupNote],
+    fase: [
+      blocoEstado(state, caminhos),
+      ...modulosDoContexto(state, caminhos).map((modulo) => lerArquivo('modules', modulo)),
+    ],
+  };
+}
+
+// Contexto completo de uma parte; sem parte, as duas juntas.
+function buildFullContext(state, caminhos, parte) {
+  const partes = partesDoContexto(state, caminhos);
+  const textos = partes[parte] || [...partes.nucleo, ...partes.fase];
+  return textos.filter(Boolean).join(SEPARADOR);
 }
 
 // Contexto do SubagentStart: papel, proibições e o essencial da fase, sem o
@@ -468,24 +478,26 @@ function blocosDoContexto(texto) {
     .filter(Boolean);
 }
 
-function buildInjectedContext(state, caminhos) {
-  const completo = buildFullContext(state, caminhos);
+function buildInjectedContext(state, caminhos, parte) {
+  if (parte !== 'nucleo' && parte !== 'fase') {
+    return ['nucleo', 'fase']
+      .map((p) => buildInjectedContext(state, caminhos, p))
+      .filter(Boolean)
+      .join(SEPARADOR);
+  }
+  const completo = buildFullContext(state, caminhos, parte);
   if (!lerArquivo('AGENTS.md')) return completo;
   if (caminhos && ['unreadable', 'invalid', 'ambiguous'].includes(caminhos.status)) return completo;
-  // Rede de segurança: os orçamentos dos módulos mantêm cada fase abaixo do
-  // limite, e a compactação só age se o AGENTS.md crescer além do previsto.
-  const modulosProtegidos = modulosDoContexto(state, caminhos).flatMap((modulo) =>
-    blocosDoContexto(lerArquivo('modules', modulo))
-  );
-  const selecionado = selectContextBlocks(completo, {
-    budget: CONTEXT_BUDGET,
-    protected: [
-      ...ANCORAS,
-      ...(caminhos && caminhos.setupNote ? [caminhos.setupNote] : []),
-      '## Estado do Stilo Code',
-      ...modulosProtegidos,
-    ],
-  });
+  // Rede de segurança: os orçamentos dos módulos mantêm cada parte abaixo do
+  // limite, e a compactação só age se um texto crescer além do previsto.
+  const protegidos =
+    parte === 'nucleo'
+      ? [...ANCORAS, ...(caminhos && caminhos.setupNote ? [caminhos.setupNote] : [])]
+      : [
+          '## Estado do Stilo Code',
+          ...modulosDoContexto(state, caminhos).flatMap((modulo) => blocosDoContexto(lerArquivo('modules', modulo))),
+        ];
+  const selecionado = selectContextBlocks(completo, { budget: CONTEXT_BUDGET, protected: protegidos });
   return selecionado === null ? completo : selecionado;
 }
 

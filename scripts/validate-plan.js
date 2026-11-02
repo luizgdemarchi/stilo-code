@@ -302,13 +302,32 @@ function validatePlan(text) {
   return { valid: errors.length === 0, errors, waves, warnings };
 }
 
+// Plano do ciclo ativo, achado pelo .stilo/state.json a partir de `cwd`. Sem
+// caminho fixo no package.json, um ciclo novo não muda o conteúdo distribuído.
+function planoDoCicloAtivo(cwd) {
+  const { documentosDoCiclo, resolveProjeto } = require('../hooks/stilo-state.js');
+  const projeto = resolveProjeto(cwd);
+  if (projeto.status !== 'valid') return { erro: 'nenhum projeto válido a partir do diretório atual' };
+  const docs = documentosDoCiclo(path.dirname(path.dirname(projeto.statePath)), projeto.state);
+  if (docs.trilha === 'curta') return { erro: `trilha curta: ${docs.ciclo} não tem plano no contrato de tarefas` };
+  return { plano: docs.plan };
+}
+
 function main(argv = process.argv.slice(2)) {
-  if (argv.length !== 1) {
-    console.error('Uso: node scripts/validate-plan.js <arquivo.md>');
+  let alvo = argv[0];
+  if (argv.length === 0) {
+    const ativo = planoDoCicloAtivo(process.cwd());
+    if (ativo.erro) {
+      console.error(`Uso: node scripts/validate-plan.js [arquivo.md] (${ativo.erro})`);
+      return 2;
+    }
+    alvo = ativo.plano;
+  } else if (argv.length !== 1) {
+    console.error('Uso: node scripts/validate-plan.js [arquivo.md]');
     return 2;
   }
 
-  const planPath = path.resolve(argv[0]);
+  const planPath = path.resolve(alvo);
   let text;
   try {
     text = fs.readFileSync(planPath, 'utf8');

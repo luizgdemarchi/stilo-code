@@ -12,7 +12,7 @@
   },
   "scripts": {
     "test": "node --test tests/all.test.js",
-    "validate-plan": "node scripts/validate-plan.js docs/ciclos/2026-11-02-dieta-superpowers-design/plan.md",
+    "validate-plan": "node scripts/validate-plan.js",
     "verificar-publicacao": "node scripts/verificar-publicacao.js"
   }
 }

@@ -83,6 +83,8 @@ function medirArquivo(arquivo, total) {
     throw new CaminhoInvalido(`caminho ilegível: ${arquivo}`);
   }
   const contexto = { vistos: new Set(), nomes: new Map(), saidas: [], chamadasCodex: 0, usoCodex: null };
+  const chamadasAntes = total.chamadas;
+  let validas = 0;
   for (const linha of texto.split(/\r?\n/)) {
     if (!linha.trim()) continue;
     let registro;
@@ -92,6 +94,7 @@ function medirArquivo(arquivo, total) {
       total.linhasInvalidas += 1;
       continue;
     }
+    validas += 1;
     if (!registro || typeof registro !== 'object' || typeof registro.type !== 'string') {
       total.linhasDesconhecidas += 1;
     } else if (registro.payload && typeof registro.payload === 'object') {
@@ -114,6 +117,10 @@ function medirArquivo(arquivo, total) {
     total.tokens.saida += numero(uso.output_tokens);
   }
 
+  // Os hosts acrescentam tipos de linha com frequência, e uma lista de tipos conhecidos
+  // viraria ruído. O sinal de formato novo é o arquivo legível sem nenhuma chamada.
+  if (validas > 0 && total.chamadas === chamadasAntes) total.arquivosSemChamadas += 1;
+
   for (const [id, caracteres] of contexto.saidas) {
     const nome = nomeDaFerramenta(contexto.nomes.get(id));
     const item = total.ferramentas[nome] || (total.ferramentas[nome] = { chamadas: 0, caracteres: 0 });
@@ -130,6 +137,7 @@ function medir(caminho) {
     ferramentas: {},
     linhasInvalidas: 0,
     linhasDesconhecidas: 0,
+    arquivosSemChamadas: 0,
   };
   for (const arquivo of arquivosJsonl(caminho)) {
     medirArquivo(arquivo, total);
@@ -168,7 +176,14 @@ function formatar(resultado) {
   for (const item of resultado.ferramentas) {
     linhas.push(`  ${item.nome.padEnd(24)}${String(item.caracteres).padStart(12)}${`${item.percentual}%`.padStart(9)}  (${item.chamadas} chamada(s))`);
   }
-  linhas.push('', `Linhas inválidas: ${resultado.linhasInvalidas} · linhas de tipo desconhecido: ${resultado.linhasDesconhecidas}`);
+  linhas.push(
+    '',
+    `Linhas inválidas: ${resultado.linhasInvalidas} · linhas de tipo desconhecido: ${resultado.linhasDesconhecidas}` +
+      ` · arquivos sem chamada reconhecida: ${resultado.arquivosSemChamadas}`
+  );
+  if (resultado.arquivosSemChamadas) {
+    linhas.push('Aviso: arquivo legível sem nenhuma chamada reconhecida; o formato do transcript pode ter mudado.');
+  }
   return linhas.join('\n');
 }
 

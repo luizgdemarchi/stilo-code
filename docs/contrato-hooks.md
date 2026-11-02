@@ -85,7 +85,7 @@ Contrato do ciclo 2026-11-02. Os limites são conferidos pelos testes.
 
 | Evento | Lê do stdin | Injeta |
 |---|---|---|
-| `SessionStart` | `session_id`, `cwd` | `AGENTS.md`, bloco de estado, nota do `gh` quando falta, módulos da fase; até 19.500 caracteres, sem compactação |
+| `SessionStart` | `session_id`, `cwd` | `AGENTS.md`, bloco de estado, nota do `gh` quando falta, módulos da fase, em dois comandos (`nucleo`: `AGENTS.md` e nota do `gh`; `fase`: estado e módulos), cada texto com até 10.000 caracteres e 10.000 bytes, sem compactação |
 | `UserPromptSubmit` | `session_id`, `cwd` | linha de estado; na troca de fase, também os módulos da fase nova |
 | `SubagentStart` | nada | contexto reduzido do subagente, até 6.000 caracteres |
 

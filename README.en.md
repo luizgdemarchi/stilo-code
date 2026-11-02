@@ -88,10 +88,11 @@ or update.
 
 Hosts cache the plugin by version. Contributors who change a distributed file (`AGENTS.md`,
 `modules/`, `hooks/`, `scripts/`, manifests) bump the version in all three manifests
-(`package.json`, `.claude-plugin/plugin.json`, and `.codex-plugin/plugin.json`), record the
-release with `node scripts/verificar-publicacao.js --registrar`, and check it with
+(`package.json`, `.claude-plugin/plugin.json`, and `.codex-plugin/plugin.json`) and, in
+`DONE`, right before publishing, record the release with
+`node scripts/verificar-publicacao.js --registrar` and check it with
 `npm run verificar-publicacao`. The check fails when content changed and the version did
-not.
+not, so the record waits until after the last `FIX`.
 
 ## License
 

@@ -18,7 +18,9 @@ const {
 } = require('../hooks/stilo-instructions.js');
 
 const RAIZ = path.join(__dirname, '..');
-const LIMITE_SESSAO = 19500;
+// Limite por texto de hook: o Claude Code troca por uma prévia acima de 10.000
+// caracteres, e o Codex acima de ~2.500 tokens (~10.000 bytes).
+const LIMITE_SESSAO = 10000;
 const LIMITE_SUBAGENTE = 6000;
 
 // Tabela de R7.1 (spec do ciclo 2026-11-02), sem enxuto e frontend.
@@ -219,7 +221,7 @@ test('contexto da fase traz cada módulo inteiro; FIX traz correcao.md', () => {
   assert.match(buildFullContext(estado({ phase: 'REVIEW', reviewRound: 2 })), /review-03\.md/);
 });
 
-test('C05: SessionStart cabe em 19.500 e é igual ao completo em toda fase', () => {
+test('C05: cada parte do SessionStart cabe em 10.000 caracteres e bytes e é igual à completa', () => {
   const nota = buildSetupNote(pluginRoot(), { status: 'absent' });
   assert.ok(nota.length > 0);
   const id = '2026-11-02-orcamento';
@@ -236,11 +238,20 @@ test('C05: SessionStart cabe em 19.500 e é igual ao completo em toda fase', () 
         });
         const { caminhos } = projeto(state, ['spec.md', 'plan.md', ...(comDesign ? ['design.md'] : [])]);
         if (comNota) caminhos.setupNote = nota;
-        const completo = buildFullContext(state, caminhos);
-        const injetado = buildInjectedContext(state, caminhos);
-        const rotulo = `${phase} design=${comDesign} gh=${comNota}: ${injetado.length}`;
-        assert.ok(injetado.length <= LIMITE_SESSAO, rotulo);
-        assert.strictEqual(injetado, completo, rotulo);
+        for (const parte of ['nucleo', 'fase']) {
+          const completo = buildFullContext(state, caminhos, parte);
+          const injetado = buildInjectedContext(state, caminhos, parte);
+          const bytes = Buffer.byteLength(injetado, 'utf8');
+          const rotulo = `${phase} ${parte} design=${comDesign} gh=${comNota}: ${injetado.length} / ${bytes} bytes`;
+          assert.ok(injetado.length <= LIMITE_SESSAO, rotulo);
+          assert.ok(bytes <= LIMITE_SESSAO, rotulo);
+          assert.strictEqual(injetado, completo, rotulo);
+        }
+        const nucleo = buildInjectedContext(state, caminhos, 'nucleo');
+        const daFase = buildInjectedContext(state, caminhos, 'fase');
+        assert.ok(nucleo.includes('## Regra 0') && !nucleo.includes('## Estado do Stilo Code'), phase);
+        assert.ok(daFase.includes('## Estado do Stilo Code') && !daFase.includes('## Regra 0'), phase);
+        assert.strictEqual(nucleo.includes('## Preparação pendente do GitHub CLI'), comNota, phase);
       }
     }
   }

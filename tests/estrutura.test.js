@@ -190,7 +190,22 @@ test('C17: documentos migrados para docs/ciclos e originais ausentes', () => {
       assert.ok(fs.existsSync(path.join(RAIZ, 'docs', 'ciclos', ciclo, arquivo)), `${ciclo}/${arquivo}`);
     }
   }
-  assert.match(JSON.parse(le('package.json')).scripts['validate-plan'], /docs\/ciclos\/[^ ]+\/plan\.md$/);
+  // Sem caminho fixo: o script acha o plano do ciclo ativo, e um ciclo novo não
+  // muda o package.json distribuído (emenda 10 do plano).
+  assert.strictEqual(JSON.parse(le('package.json')).scripts['validate-plan'], 'node scripts/validate-plan.js');
+});
+
+test('contador de rodada tem um dono só: a fase de revisão grava o contador', () => {
+  // Incrementar também na correção pulava um número ou apontava o relatório errado
+  // (achado 2 do review-22).
+  for (const rel of ['AGENTS.md', ...fs.readdirSync(path.join(RAIZ, 'modules')).map((nome) => `modules/${nome}`)]) {
+    // O verbo, não "incremental", que nomeia o modo da revisão editorial.
+    assert.doesNotMatch(le(rel), /increment(?!al)/i, rel);
+  }
+  const { buildFullContext } = require('../hooks/stilo-instructions.js');
+  const base = { version: 1, project: 'x', reviewRound: 22, editorialReviewRound: 1 };
+  assert.match(buildFullContext({ ...base, phase: 'FIX' }, [], 'fase'), /achados de `\.stilo\/review-22\.md`/);
+  assert.match(buildFullContext({ ...base, phase: 'EDITORIAL_FIX' }, [], 'fase'), /achados de `\.stilo\/editorial-review-01\.md`/);
 });
 
 test('C19: superpowers só nos avisos de terceiros, com as duas licenças', () => {
@@ -200,11 +215,8 @@ test('C19: superpowers só nos avisos de terceiros, com as duas licenças', () =
   assert.match(avisos, /Apache/);
   assert.match(avisos, /frontend-design/);
   assert.ok(fs.existsSync(path.join(RAIZ, 'licenses', 'Apache-2.0.txt')));
-  // O id do ciclo 2026-11-02 contém a palavra e aparece no caminho do
-  // `validate-plan` do package.json; é nome de pasta, não menção ao plugin.
-  const idDoCiclo = '2026-11-02-dieta-superpowers-design';
   for (const rel of arquivosDistribuidos().filter((r) => r !== 'THIRD_PARTY_NOTICES.md')) {
-    assert.doesNotMatch(le(rel).split(idDoCiclo).join(''), /superpowers/i, rel);
+    assert.doesNotMatch(le(rel), /superpowers/i, rel);
   }
 });
 

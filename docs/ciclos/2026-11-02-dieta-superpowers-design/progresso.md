@@ -95,3 +95,18 @@ esperam autorização do usuário.
 - Trilha curta: o `SPEC` escreve `ciclo.md` com `## Spec` e `## Plano` e pede uma aprovação;
   o `PLAN` só confere os passos.
 - Módulos novos e reescritos começam com a linha `Gatilho: ...` (contrato para T13).
+
+## REVIEW e FIX — 2026-11-02 (sessão 3)
+
+- Checkpoint commitado em `0d32afd`, branch `ciclo/2026-11-02-dieta-superpowers-design`
+  (`main` intocado; integração só no `DONE`, por escolha do usuário).
+- `review-22`: 1 crítico (SessionStart acima do limite de 10.000 dos hosts), 1 alto
+  (contador de rodada), 2 médios, 2 baixos. Usuário dispensou voltar ao `SPEC`: emenda de
+  R2.2/C05 no spec e decisões 8–10 no plano.
+- FIX: os 6 achados corrigidos (estados no `review-22`). `npm test` 160/160;
+  `validate-plan` 13 tarefas/5 ondas; `git diff --check` limpo. `verificar-publicacao` falha
+  com `publicacao.json ausente` de propósito: registrar só no `DONE`, logo antes de publicar.
+- Estado: `REVIEW`, `reviewRound: 22`. Próximo: `review-23` conferindo as correções.
+- Pendente para o `review-23` olhar: `evidencias.md` ainda tem a tabela do contexto antes da
+  divisão (medido depois: núcleo 8.733; fase 2.793 `BRAINSTORM` a 6.548 `REVIEW`; pior caso
+  da fase 9.470 caracteres / 9.713 bytes); limite do Codex em tokens não verificado ao vivo.

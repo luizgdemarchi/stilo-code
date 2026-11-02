@@ -27,9 +27,9 @@ BRAINSTORM → SPEC → PLAN → EXECUTE → REVIEW ⇄ FIX → EDITORIAL_REVIEW
 | `SPEC` | `spec.md`, e `design.md` com interface | o usuário aprova |
 | `PLAN` | `plan.md` | passos verificáveis e decisões fechadas estão escritos |
 | `EXECUTE` | o código | todos os passos estão feitos e verificados |
-| `REVIEW` | `.stilo/review-NN.md`, `NN` = `reviewRound` + 1 | o review está gravado |
+| `REVIEW` | `.stilo/review-NN.md`, `NN` = `reviewRound` + 1 | o review está gravado, e `reviewRound` = `NN` |
 | `FIX` | código corrigido | cada achado está `corrigido` ou `descartado` com evidência |
-| `EDITORIAL_REVIEW` | `.stilo/editorial-review-NN.md`, `NN` = `editorialReviewRound` + 1 | o relatório está gravado, sem editar arquivos |
+| `EDITORIAL_REVIEW` | `.stilo/editorial-review-NN.md`, `NN` = `editorialReviewRound` + 1 | o relatório está gravado, sem editar arquivos, e `editorialReviewRound` = `NN` |
 | `EDITORIAL_FIX` | textos corrigidos | cada achado editorial está decidido com motivo |
 | `DONE` | nenhum | auditoria e integração foram oferecidas; nada é integrado sem escolha do usuário |
 

@@ -8,6 +8,9 @@ Emendas do `PLAN` (aprovadas com o plano em 2026-11-02): R2.8, R2.9, R3.6, a tab
 e os critérios C18, C24 e C25. Motivo: com o núcleo limitado a 10.000 caracteres, o "como" de cada
 fase passa para o módulo da fase, e o orçamento por fase só fecha se `orquestracao.md` for
 dividido e o `REVIEW` deixar de recebê-lo.
+Emenda do `FIX` (achado 1 do `review-22`, aprovada pelo usuário em 2026-11-02): R2.2 e C05.
+Motivo: o limite de 19.500 era maior que o dos hosts, que trocam por uma prévia a saída de
+hook acima de 10.000 caracteres (Claude Code) ou de cerca de 2.500 tokens (Codex).
 
 ## 1. Problema
 
@@ -73,9 +76,12 @@ automáticos e por medição registrada.
 ### R2 — Contexto injetado
 
 - R2.1 O `AGENTS.md` tem no máximo 10.000 caracteres.
-- R2.2 Em cada uma das nove fases, o contexto do `SessionStart` tem no máximo 19.500
-  caracteres e é idêntico ao contexto completo, ou seja, a compactação não descarta nenhum
-  bloco. Vale com e sem a nota de preparação do `gh`, e com e sem `design.md` no ciclo.
+- R2.2 Em cada uma das nove fases, cada texto que o `SessionStart` injeta tem no máximo
+  10.000 caracteres e 10.000 bytes em UTF-8 e é idêntico ao seu contexto completo, ou seja,
+  a compactação não descarta nenhum bloco. Vale com e sem a nota de preparação do `gh`, e
+  com e sem `design.md` no ciclo. Motivo: acima desse tamanho, o Claude Code entrega ao
+  modelo só o caminho de um arquivo e uma prévia de 2.000 caracteres, e o Codex faz o mesmo
+  acima de cerca de 2.500 tokens (emenda do `FIX`; antes, 19.500 num texto só).
 - R2.3 O contexto do `SubagentStart` tem no máximo 6.000 caracteres em todas as fases.
   Ele contém:
   - projeto, fase e ciclo;
@@ -266,7 +272,7 @@ Todos executáveis. Salvo indicação, são cobertos pelo `npm test`.
 | C02 | As três versões são iguais a `0.2.0` | R1.1 |
 | C03 | Numa cópia temporária, alterar um arquivo distribuído sem mudar a versão faz a verificação de publicação falhar; com versão nova, ela passa | R1.2 |
 | C04 | `AGENTS.md` tem no máximo 10.000 caracteres | R2.1 |
-| C05 | Para cada fase, com e sem nota do `gh` e com e sem `design.md`: o contexto do `SessionStart` tem no máximo 19.500 caracteres e é igual ao contexto completo | R2.2, R8.3 |
+| C05 | Para cada fase, com e sem nota do `gh` e com e sem `design.md`: cada texto do `SessionStart` tem no máximo 10.000 caracteres e 10.000 bytes e é igual ao seu contexto completo | R2.2, R8.3 |
 | C06 | Para cada fase, o contexto do `SubagentStart` tem no máximo 6.000 caracteres e contém fase, ciclo, as três proibições e o essencial da fase de R2.3 | R2.3 |
 | C07 | O `AGENTS.md` não contém as seções "Preparação do ambiente" nem "Contrato de tarefas e ondas", e contém as âncoras das regras de saída de comandos e de verificação antes de concluir | R2.4, R2.6, R2.7 |
 | C08 | Nenhum arquivo distribuído contém "até zero achados"; `AGENTS.md` e `revisor.md` contêm o critério único | R3.1 |

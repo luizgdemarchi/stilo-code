@@ -67,7 +67,8 @@ executado.
 ## Arquivo e saída
 
 Grave `.stilo/review-NN.md`, com `NN` igual a `reviewRound` + 1 em dois dígitos, sem
-sobrescrever os anteriores: a sequência é o histórico. Cabeçalho com alvo, cobertura,
+sobrescrever os anteriores: a sequência é o histórico. No mesmo passo, grave `reviewRound`
+igual a `NN`; o `FIX` não mexe no contador. Cabeçalho com alvo, cobertura,
 exclusões e documentos usados; depois, resumo por gravidade, achados e a tabela dos
 critérios do spec.
 

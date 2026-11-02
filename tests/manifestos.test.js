@@ -62,6 +62,16 @@ test('SessionStart tem o matcher que faz o /clear funcionar', () => {
   assert.strictEqual(grupo.matcher, 'startup|resume|clear|compact');
 });
 
+// Os hosts medem cada hook separadamente e trocam por uma prévia o texto acima do
+// limite; por isso o SessionStart sai em dois comandos (emenda 8 do plano).
+test('SessionStart roda as partes núcleo e fase em comandos separados', () => {
+  const grupos = leJson('hooks/claude-codex-hooks.json').hooks.SessionStart;
+  const comandos = grupos.flatMap((grupo) => grupo.hooks);
+  const partes = (campo) => comandos.map((hook) => (hook[campo].match(/stilo-activate\.js\\?"? (\w+)/) || [])[1]);
+  assert.deepStrictEqual(partes('command'), ['nucleo', 'fase']);
+  assert.deepStrictEqual(partes('commandWindows'), ['nucleo', 'fase']);
+});
+
 test('nenhum comando ou skill público do Stilo é publicado', () => {
   for (const rel of [
     'commands/stilo.toml',

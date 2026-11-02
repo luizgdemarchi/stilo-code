@@ -55,7 +55,8 @@ localizada. Confiança mede a evidência, não a gravidade.
 ## Relatório
 
 Em `EDITORIAL_REVIEW`, não edite arquivos. Grave `.stilo/editorial-review-NN.md`, com `NN`
-igual a `editorialReviewRound` + 1, sem sobrescrever os anteriores. Cabeçalho: modo
+igual a `editorialReviewRound` + 1, sem sobrescrever os anteriores, e grave
+`editorialReviewRound` igual a `NN`; a correção não mexe no contador. Cabeçalho: modo
 (incremental ou integral), commit-base, `HEAD` ou snapshot revisado, objetivo e público,
 cobertura, exclusões e limitações. Depois, resumo por gravidade e achados. Sem achados,
 registre `0 achados` e mantenha cobertura e exclusões.
@@ -65,7 +66,7 @@ registre `0 achados` e mantenha cobertura e exclusões.
 Corrija cada achado com a menor mudança que resolve o efeito, sem busca e troca em massa.
 Preserve fatos, negações, números, nomes, termos técnicos, contratos e comportamento do
 código. Marque `corrigido` com `caminho:linha` ou `descartado` com motivo; nenhum item fica
-sem decisão. Depois, incremente `editorialReviewRound` e volte a `EDITORIAL_REVIEW`.
+sem decisão. Depois, volte a `EDITORIAL_REVIEW`.
 
 Saída: uma rodada sem achado `crítico` nem `alto`, com os anteriores resolvidos ou
 descartados com motivo. Então grave `phase: "DONE"`.

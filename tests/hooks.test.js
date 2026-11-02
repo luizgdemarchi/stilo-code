@@ -37,8 +37,8 @@ function cenario(state) {
 
 // O diretório de dados fica fora do projeto e é isolado por teste; sem ele, o
 // rastreio de sessão iria para o diretório de dados real de quem roda a suíte.
-function rodaHook(arquivo, { cwd, home, stdin, env }) {
-  return spawnSync(process.execPath, [path.join(HOOKS, arquivo)], {
+function rodaHook(arquivo, { cwd, home, stdin, env, args = [] }) {
+  return spawnSync(process.execPath, [path.join(HOOKS, arquivo), ...args], {
     cwd,
     input: stdin === undefined ? '' : stdin,
     encoding: 'utf8',
@@ -80,6 +80,25 @@ test('SessionStart injeta contexto e estado do projeto', () => {
   assert.match(r.stdout, /Stilo Code — pipeline de projeto/);
   assert.match(r.stdout, /\*\*Fase:\*\* PLAN/);
   assert.match(r.stdout, /escrever plan\.md/);
+});
+
+test('SessionStart em duas partes: núcleo e fase, cada uma dentro do limite do host', () => {
+  const c = cenario({ phase: 'REVIEW', reviewRound: 3 });
+  const stdin = JSON.stringify({ session_id: 'sessao-partes', cwd: c.projeto });
+  const nucleo = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, stdin, args: ['nucleo'] });
+  const daFase = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, stdin, args: ['fase'] });
+  assert.strictEqual(nucleo.status, 0);
+  assert.strictEqual(daFase.status, 0);
+  assert.match(nucleo.stdout, /Stilo Code — pipeline de projeto/);
+  assert.doesNotMatch(nucleo.stdout, /## Estado do Stilo Code/);
+  assert.match(daFase.stdout, /\*\*Fase:\*\* REVIEW/);
+  assert.ok(daFase.stdout.includes(modulo('revisor.md')));
+  assert.doesNotMatch(daFase.stdout, /## Regra 0/);
+  for (const saida of [nucleo.stdout, daFase.stdout]) {
+    assert.ok(saida.length <= 10000 && Buffer.byteLength(saida, 'utf8') <= 10000, String(saida.length));
+  }
+  // Só a parte da fase registra a sessão: o núcleo não traz módulos.
+  assert.deepStrictEqual(fs.readdirSync(path.join(c.dados, 'sessoes')).length, 1);
 });
 
 test('SessionStart ignora flag legado e continua automático', () => {
@@ -229,7 +248,10 @@ test('C24: troca de fase na sessão injeta os módulos da fase nova uma vez', ()
   const antes = listagem(c.projeto);
   const sessao = JSON.stringify({ session_id: 'sessao-1', cwd: c.projeto, prompt: 'oi' });
 
-  const inicio = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, stdin: sessao });
+  const nucleo = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, stdin: sessao, args: ['nucleo'] });
+  assert.strictEqual(nucleo.status, 0);
+  assert.strictEqual(fs.existsSync(path.join(c.dados, 'sessoes')), false);
+  const inicio = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, stdin: sessao, args: ['fase'] });
   assert.strictEqual(inicio.status, 0);
   assert.ok(inicio.stdout.includes(modulo('plano.md')));
 

@@ -10,7 +10,8 @@ explícita dele, porque desfazer custa mais do que perguntar.
    rodada anterior prova só aquela árvore. Suíte vermelha: relate as falhas e pare.
 3. Projeto que é plugin ou skill: suba a versão nos manifestos e rode a verificação de
    publicação do projeto, se existir. O host guarda o plugin em cache pela versão, e conteúdo
-   novo com versão repetida não chega a ninguém.
+   novo com versão repetida não chega a ninguém. Registro de publicação, se houver, só
+   aqui, logo antes de publicar: registrado antes, ele trava as correções do `FIX`.
 4. Confirme a branch-base, porque integrar na base errada é caro de desfazer. Commit também
    depende de autorização.
 5. Ofereça e espere a resposta:

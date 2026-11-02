@@ -88,9 +88,11 @@ ou atualização autorizada.
 
 Os hosts guardam o plugin em cache pela versão. Quem contribui e muda um arquivo
 distribuído (`AGENTS.md`, `modules/`, `hooks/`, `scripts/`, manifestos) sobe a versão nos
-três manifestos (`package.json`, `.claude-plugin/plugin.json` e `.codex-plugin/plugin.json`),
-registra a publicação com `node scripts/verificar-publicacao.js --registrar` e confere com
-`npm run verificar-publicacao`. A verificação falha quando o conteúdo mudou e a versão não.
+três manifestos (`package.json`, `.claude-plugin/plugin.json` e `.codex-plugin/plugin.json`)
+e, no `DONE`, logo antes de publicar, registra a publicação com
+`node scripts/verificar-publicacao.js --registrar` e confere com `npm run verificar-publicacao`.
+A verificação falha quando o conteúdo mudou e a versão não; por isso o registro fica para
+depois do último `FIX`.
 
 ## Licença
 

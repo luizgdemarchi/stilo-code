@@ -13,4 +13,5 @@ Para cada achado do review mais recente (`.stilo/review-NN.md` de maior número)
 Sem concordância performática: o estado no arquivo e a evidência bastam. Não mude o que não
 foi apontado, porque essa mudança chegaria ao próximo review sem achado que a justifique.
 
-Com todos os achados decididos, incremente `reviewRound` e grave `phase: "REVIEW"`.
+Com todos os achados decididos, grave `phase: "REVIEW"` sem mexer em `reviewRound`: quem
+grava o próximo review atualiza o contador.

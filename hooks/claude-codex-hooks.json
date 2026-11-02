@@ -6,10 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stilo-activate.js\"",
-            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\stilo-activate.js\" }",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stilo-activate.js\" nucleo",
+            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\stilo-activate.js\" nucleo }",
             "timeout": 5,
             "statusMessage": "Carregando o pipeline Stilo..."
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stilo-activate.js\" fase",
+            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\stilo-activate.js\" fase }",
+            "timeout": 5,
+            "statusMessage": "Lendo o estado do projeto..."
           }
         ]
       }

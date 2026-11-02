@@ -20,7 +20,7 @@ const ENXUTO_VALIDOS = ['auto', ...NIVEIS];
 // O id do ciclo vira nome de pasta em docs/ciclos/: só minúsculas, dígitos e hífen.
 const CICLO_ID = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
-// Nível de enxuto por fase quando state.enxuto é "auto" (AGENTS.md § 6).
+// Nível de enxuto por fase (AGENTS.md § 8).
 const ENXUTO_POR_FASE = {
   BRAINSTORM: 'off',
   SPEC: 'leve',

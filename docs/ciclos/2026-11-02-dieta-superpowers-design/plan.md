@@ -37,6 +37,20 @@ voltar ao `PLAN`.
    lista. Um teste antigo de prosa quebrado por tarefa anterior é reescrito na tarefa dona do
    arquivo de teste.
 
+### Emendas do `FIX` (`review-22`, aprovadas pelo usuário em 2026-11-02)
+
+8. O `SessionStart` roda dois comandos: `stilo-activate.js nucleo`, com o `AGENTS.md` e a
+   nota do `gh`, e `stilo-activate.js fase`, com o bloco de estado e os módulos, que também
+   registra a fase da sessão. Cada texto tem até 10.000 caracteres e 10.000 bytes
+   (`CONTEXT_BUDGET`), porque os hosts medem cada hook separadamente. Sem argumento, o hook
+   emite as duas partes juntas, só para inspeção manual. Substitui o orçamento de 19.500 e
+   o "pior caso de sessão" da tabela abaixo.
+9. O contador de rodada pertence à fase de revisão: quem grava `review-NN.md` (ou
+   `editorial-review-NN.md`) grava também o contador igual a `NN`. A correção não incrementa.
+10. A publicação é registrada no `DONE`, logo antes de publicar. O `publicacao.json` deste
+    ciclo, registrado em T12, sai no `FIX`. `npm run validate-plan` deixa de citar caminho:
+    sem argumento, o script usa o plano do ciclo ativo.
+
 ## Orçamentos, em caracteres (`String.length` do arquivo, sem espaços finais)
 
 | Arquivo | Máximo | Injetado em |
