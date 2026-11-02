@@ -12,12 +12,31 @@ function diretorio(data) {
   return process.cwd();
 }
 
+// A linha de estado vai em toda mensagem. Quando a fase mudou desde a última
+// injeção nesta sessão, os módulos da fase nova vão junto, uma vez. Sem
+// identificador de sessão ou sem onde registrar, a linha cita os caminhos dos
+// módulos para o agente lê-los.
+function contextoDoPrompt(data, state, caminhos) {
+  const { SEPARADOR } = require('./stilo-context.js');
+  const { buildStateLine, caminhosDosModulos, podeInjetarModulos, textoDosModulos } = require('./stilo-instructions.js');
+  const { faseMudou, registrarFase } = require('./stilo-sessao.js');
+  const linha = buildStateLine(state, caminhos);
+  if (!podeInjetarModulos(state, caminhos)) return linha;
+  const sessao = typeof data.session_id === 'string' && data.session_id ? data.session_id : null;
+  if (sessao && !faseMudou(sessao, state)) return linha;
+  if (sessao && registrarFase(sessao, state)) {
+    const modulos = textoDosModulos(state, caminhos);
+    return modulos ? `${linha}${SEPARADOR}${modulos}` : linha;
+  }
+  const arquivos = caminhosDosModulos(state, caminhos);
+  return arquivos.length ? `${linha} · módulos: ${arquivos.join(', ')}` : linha;
+}
+
 function main(data) {
   const { resolveProjeto } = require('./stilo-state.js');
-  const { buildStateLine } = require('./stilo-instructions.js');
   const { writeHookOutput } = require('./stilo-runtime.js');
   const { state, caminhos } = resolveProjeto(diretorio(data));
-  writeHookOutput('UserPromptSubmit', buildStateLine(state, caminhos));
+  writeHookOutput('UserPromptSubmit', contextoDoPrompt(data, state, caminhos));
 }
 
 if (require.main === module) {
@@ -28,4 +47,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { diretorio, main };
+module.exports = { contextoDoPrompt, diretorio, main };

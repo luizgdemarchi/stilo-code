@@ -14,6 +14,7 @@ diff, observação independente e limites de isolamento. Custo/tokens somente se
 
 Ao abrir um ciclo, preserve os documentos anteriores e crie:
 
-- `docs/superpowers/specs/<id>-design.md`
-- `docs/superpowers/plans/<id>-plan.md`
-- `.stilo/cycle.json` com `id`, `started` e `baseReview`
+- `docs/ciclos/<id>/spec.md`
+- `docs/ciclos/<id>/plan.md`
+- o campo `cycle` no `.stilo/state.json`, com o commit-base e o `reviewRound` de início no
+  cabeçalho do spec

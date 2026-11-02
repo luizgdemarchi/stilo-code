@@ -1,15 +1,9 @@
-require('./diagnostics.test.js');
-require('./hooks.test.js');
-require('./instructions.test.js');
-require('./audit.test.js');
-require('./context.test.js');
-require('./reliability-contract.test.js');
-require('./reviewer-contract.test.js');
-require('./harness-evaluation.test.js');
-require('./instruction-improvement.test.js');
-require('./github-cli-setup.test.js');
-require('./github-cli-bootstrap.test.js');
-require('./manifestos.test.js');
-require('./orchestration.test.js');
-require('./state.test.js');
-require('./validate-plan.test.js');
+const fs = require('node:fs');
+const path = require('node:path');
+
+// Descobre os testes sozinho, para que nenhum arquivo novo dependa de editar esta lista.
+const testes = fs.readdirSync(__dirname)
+  .filter((nome) => nome.endsWith('.test.js') && nome !== path.basename(__filename))
+  .sort();
+
+for (const nome of testes) require(path.join(__dirname, nome));

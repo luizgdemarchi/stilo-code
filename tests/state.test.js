@@ -4,16 +4,16 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
+const estado = require('../hooks/stilo-state.js');
 const {
+  documentosDoCiclo,
   findStateFiles,
   readCheckpoint,
-  readCycle,
   readState,
   resolveEnxuto,
   resolveProjeto,
   validateState,
   writeCheckpoint,
-  writeCycle,
   writeState,
 } = require('../hooks/stilo-state.js');
 
@@ -230,25 +230,45 @@ test('checkpoint inválido ou corrompido não é aceito nem sobrescrito', () => 
   assert.strictEqual(fs.readFileSync(p, 'utf8'), antes);
 });
 
-test('ciclo grava id, started e baseReview sem lixo temporário', () => {
-  const raiz = tmpdir();
-  const p = path.join(raiz, '.stilo', 'cycle.json');
-  const escrito = writeCycle(p, { id: 'retomada-2026', baseReview: 4 });
-
-  assert.strictEqual(escrito.id, 'retomada-2026');
-  assert.strictEqual(escrito.baseReview, 4);
-  assert.match(escrito.started, /^\d{4}-\d{2}-\d{2}T/);
-  assert.deepStrictEqual(readCycle(p), escrito);
-  assert.strictEqual(fs.existsSync(p + '.tmp'), false);
+test('validateState aceita cycle válido ou ausente e rejeita cycle inválido citando o campo', () => {
+  assert.strictEqual(validateState(estadoValido({ cycle: '2026-11-02-dieta' })).valid, true);
+  assert.strictEqual(validateState(estadoValido()).valid, true);
+  for (const cycle of ['A!', '../fora', 'x', 7, '-comeca-com-hifen', 'a'.repeat(65)]) {
+    const resultado = validateState(estadoValido({ cycle }));
+    assert.strictEqual(resultado.valid, false, String(cycle));
+    assert.ok(resultado.errors.some((erro) => erro.startsWith('cycle')), String(cycle));
+  }
 });
 
-test('ciclo rejeita slug inválido e leitura corrompida', () => {
+test('documentosDoCiclo resolve legado, trilha completa e trilha curta', () => {
   const raiz = tmpdir();
-  const p = path.join(raiz, '.stilo', 'cycle.json');
+  const legado = documentosDoCiclo(raiz, estadoValido());
+  assert.strictEqual(legado.trilha, 'legado');
+  assert.strictEqual(legado.spec, path.join(raiz, 'spec.md'));
+  assert.strictEqual(legado.plan, path.join(raiz, 'plan.md'));
+  assert.strictEqual(legado.ciclo, null);
+  assert.strictEqual(legado.design, null);
 
-  assert.strictEqual(writeCycle(p, { id: 'A!', baseReview: 0 }), null);
-  assert.strictEqual(fs.existsSync(p), false);
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, '[]');
-  assert.strictEqual(readCycle(p), null);
+  const dir = path.join(raiz, 'docs', 'ciclos', '2026-11-02-a');
+  fs.mkdirSync(dir, { recursive: true });
+  const completa = documentosDoCiclo(raiz, estadoValido({ cycle: '2026-11-02-a' }));
+  assert.strictEqual(completa.trilha, 'completa');
+  assert.strictEqual(completa.dir, dir);
+  assert.strictEqual(completa.spec, path.join(dir, 'spec.md'));
+  assert.strictEqual(completa.plan, path.join(dir, 'plan.md'));
+  assert.strictEqual(completa.design, null);
+
+  fs.writeFileSync(path.join(dir, 'ciclo.md'), '## Spec\n\n## Plano\n');
+  fs.writeFileSync(path.join(dir, 'design.md'), '# Design\n');
+  const curta = documentosDoCiclo(raiz, estadoValido({ cycle: '2026-11-02-a' }));
+  assert.strictEqual(curta.trilha, 'curta');
+  assert.strictEqual(curta.ciclo, path.join(dir, 'ciclo.md'));
+  assert.strictEqual(curta.spec, null);
+  assert.strictEqual(curta.design, path.join(dir, 'design.md'));
+});
+
+test('exports removidos não existem mais', () => {
+  for (const nome of ['isOff', 'setOff', 'offFlagPath', 'stiloHome', 'validateCycle', 'readCycle', 'writeCycle', 'CICLO_SLUG']) {
+    assert.strictEqual(estado[nome], undefined, nome);
+  }
 });

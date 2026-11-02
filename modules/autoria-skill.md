@@ -70,6 +70,26 @@ solto precisa saber se ele se aplica.
 
 O que **nunca** sai do arquivo principal: as regras que valem sempre, e a ordem dos passos.
 
+## Testar a skill como código
+
+Uma instrução só prova que funciona quando muda o comportamento de um agente. Skill nova ou
+editada passa pelo mesmo ciclo do TDD:
+
+1. **Linha de base.** Antes de escrever, rode num subagente, sem a skill, um cenário de
+   pressão: uma tarefa que tente a falha, com prazo, custo já investido ou autoridade
+   empurrando para o atalho. Registre as escolhas e as justificativas nas palavras do
+   agente. Se ele acerta sem a skill, não há o que escrever.
+2. **Com a skill.** Escreva só o que responde às falhas observadas e rode o mesmo cenário.
+   Agora o agente precisa cumprir.
+3. **Fechar brechas.** Cada justificativa nova vira contra-argumento explícito ou sinal de
+   alerta na skill; repita até não surgir brecha.
+
+A forma segue a falha. Regra conhecida e pulada sob pressão pede proibição com as
+justificativas rebatidas. Saída no formato errado pede a receita do formato certo, porque
+proibição vira negociação. Elemento esquecido pede campo obrigatório no modelo.
+Comportamento condicional pede condição observável, não regra geral com exceções. Rode
+várias amostras por variante: uma só engana.
+
 ## Claude Code e Codex
 
 O Stilo Code só suporta Claude Code e Codex. Uma skill que deve rodar nos dois mantém **uma

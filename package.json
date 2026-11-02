@@ -1,6 +1,6 @@
 {
   "name": "stilo-code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pipeline de projeto como máquina de estados persistida em disco, para Claude Code e Codex.",
   "license": "MIT",
   "private": false,
@@ -12,6 +12,7 @@
   },
   "scripts": {
     "test": "node --test tests/all.test.js",
-    "validate-plan": "node scripts/validate-plan.js docs/superpowers/plans/2026-10-19-confiabilidade-agente-plan.md"
+    "validate-plan": "node scripts/validate-plan.js docs/ciclos/2026-11-02-dieta-superpowers-design/plan.md",
+    "verificar-publicacao": "node scripts/verificar-publicacao.js"
   }
 }

@@ -27,7 +27,7 @@ agente ou arquivo removido; o motivo fica no Resultado e eles não bloqueiam `DO
 | 18 | T03 | teste de tamanho por fase | local | `tests/context.test.js` | review-09 |
 | 19 | T03 | fallback byte a byte | local | `tests/context.test.js` | review-09 |
 | 20 | T02 | validação de estado legado | local | `tests/state.test.js` | review-09 |
-| 21 | T05 | `cycle.json`, checkpoint e review-09 | local | rastreabilidade registrada | review-09 |
+| 21 | T05 | `cycle.json`, checkpoint e review-09 | retirado | `cycle.json` removido; o ciclo fica no `state.json` (ciclo 2026-11-02) | review-09 |
 | 22 | T1 | instruções e teste textual | local | auditoria explicitamente opcional e sem bloqueio de `DONE` | `tests/audit.test.js`, review-10 |
 | 23 | T1/T2 | módulo com e sem `ponytail-audit` | local | companion opcional, fallback interno silencioso | `tests/audit.test.js`, review-10 |
 | 24 | T1/T2 | contrato de `.stilo/cleanup-NN.md` | local | histórico preservado e evidência acionável | `tests/audit.test.js`, review-10 |

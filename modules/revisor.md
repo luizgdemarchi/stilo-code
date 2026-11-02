@@ -1,125 +1,79 @@
-# Módulo: Revisor
+Gatilho: fase `REVIEW`. Injetado pelo hook; não vale nas outras fases.
 
-**Gatilho: carregue este módulo na fase `REVIEW`.** Em qualquer outra fase, ignore este
-arquivo.
+# Revisão técnica
 
-Revisar procura falhas verificáveis. Zero achados é resultado válido; não invente problemas.
-Revisores não escrevem no código. Registre o alvo por commits ou snapshot explícito de
-staged, unstaged e arquivos novos relevantes, com hashes, cobertura e exclusões. Distingua
-introduzido, preexistente e indeterminado. Reviews antigos não exigem migração.
+Procure falhas verificáveis no diff do ciclo. Zero achados é resultado válido; achado
+inventado custa uma rodada de `FIX`. Revisores não escrevem no código.
+
+Alvo: os commits desde o commit-base do ciclo, ou um snapshot de staged, unstaged e arquivos
+novos com hashes. Registre cobertura e exclusões, e diga se cada achado foi introduzido no
+ciclo, é preexistente ou indeterminado.
 
 ## O que revisar, nesta ordem
 
-A ordem importa: um bug de corretude em código que nem deveria existir é tempo perdido.
+Um bug de corretude em código que nem deveria existir é tempo perdido; por isso o escopo vem
+primeiro.
 
-1. **O diff cumpre o `spec.md`?** Cada critério de aceite do spec: atendido, parcialmente
-   atendido ou ausente. Registre impacto e pendências obrigatórias separadamente;
-   ausência de observação não comprova bug.
-2. **O diff cumpre o `plan.md`?** Todo passo do plano foi feito? Foi feito algo que o
-   plano não pedia? Escopo a mais é achado — código não pedido também é mantido depois.
-3. **Corretude.** A lógica faz o que o nome dela promete. Leia o código como se você não
-   o tivesse escrito.
-4. **Casos de borda.** Entrada vazia, nula, zero, negativa, gigante. Coleção com um
-   elemento. Primeira e última iteração. Concorrência, se houver. Fuso e horário de verão,
-   se houver data.
-5. **Tratamento de erro.** O que acontece quando a chamada falha, o arquivo não existe, a
-   rede cai, o JSON está corrompido? Erro engolido em silêncio é achado. Erro que perde
-   dados do usuário é `crítico`.
-6. **Segurança.** Entrada de fora do sistema é validada antes de virar caminho de arquivo,
-   consulta, comando de shell ou HTML. Segredo em código-fonte ou em log. Permissão
-   verificada no servidor, não só na interface.
-7. **Testes.** Existe teste para a lógica nova? O teste falha se a lógica quebrar — ou
-   passa de qualquer jeito? Teste que só confirma o que o código faz, sem afirmar o que
-   ele deveria fazer, não é teste.
+1. **Spec** do ciclo ativo: cada critério de aceite atendido, parcial ou ausente.
+2. **Plano:** todo passo feito e nada além do pedido. Código não pedido também é mantido
+   depois.
+3. **Design:** com `design.md` no ciclo, desvio não justificado de tokens ou de layout é
+   achado.
+4. **Corretude:** a lógica faz o que o nome promete. Leia como se não fosse seu.
+5. **Bordas:** vazio, nulo, zero, negativo, enorme, um elemento, primeira e última
+   iteração, concorrência e fuso, quando houver.
+6. **Erros:** chamada que falha, arquivo ausente, rede fora, JSON corrompido. Erro engolido
+   é achado; erro que perde dado do usuário é `crítico`.
+7. **Segurança:** entrada externa validada antes de virar caminho, consulta, comando ou
+   HTML; segredo em código ou log; permissão checada no servidor.
+8. **Testes:** o teste falha se a lógica quebrar? Teste que só espelha o código não conta.
 
-## Review multiagente
+## Despacho
 
-Quando houver subagentes, o coordenador pode distribuir em paralelo somente as lentes aplicáveis: qualidade
-geral, segurança, tipagem e framework. Cada revisor retorna `arquivo:linha`, gravidade,
-alegação curta e cenário concreto, sem escrever no código.
-
-O coordenador deduplica os retornos, descarta alegações sem cenário concreto ou já
-resolvidas, ordena os achados por gravidade e sintetiza tudo no template existente
-`.stilo/review-NN.md` abaixo. Sem subagentes, faça a revisão única atual, sem erro e sem
-pedir instalação.
+Com subagentes, distribua só as lentes aplicáveis (qualidade, segurança, tipagem,
+framework). Cada revisor devolve achados no formato abaixo, sem editar arquivos. O
+coordenador deduplica, descarta alegação sem cenário concreto, ordena por gravidade e
+escreve o arquivo. Sem subagentes, faça uma revisão única.
 
 ## Formato de um achado
 
-Um achado é acionável ou não é achado. Todo campo abaixo é obrigatório.
+Achado é acionável ou não é achado. Todos os campos são obrigatórios.
 
-```
-### N. Título curto do problema
-
-- **Arquivo:** `caminho/do/arquivo.js:linha`
+```text
+### N. Título curto
+- **Arquivo:** `caminho:linha`
 - **Gravidade:** crítico | alto | médio | baixo
-- **O que quebra:** entrada ou situação concreta → resultado errado observável.
-- **Como corrigir:** a mudança mínima que resolve.
-- **Evidência:** reprodução, comando e resultado, ou leitura verificável; declarar prova não executada.
+- **O que quebra:** entrada ou situação concreta → resultado errado observável
+- **Como corrigir:** a mudança mínima
+- **Evidência:** comando e saída, ou leitura verificável; declare prova não executada
 - **Confiança:** alta | média | baixa
-- **Contraprova verificada:** chamadores e controles compartilhados que podem refutar a alegação; resultado observado.
+- **Contraprova verificada:** chamadores e controles que poderiam refutar; o que se viu
 - **Classificação:** confirmado | hipótese | sugestão
 - **Origem:** introduzido | preexistente | indeterminado
 - **Estado:** aberto
 ```
 
-**Gravidade:**
-
-| Nível | Significa |
+| Gravidade | Significa |
 |---|---|
-| `crítico` | Perde dados, expõe segredo, quebra em produção, ou um critério de aceite do `spec.md` não foi atendido |
-| `alto` | Bug real num caminho comum, ou erro tratado de forma que esconde a causa |
-| `médio` | Bug em caso de borda improvável, ou falta de teste em lógica não trivial |
+| `crítico` | Perde dados, expõe segredo, quebra em produção ou deixa critério do spec sem atender |
+| `alto` | Bug real em caminho comum, ou erro tratado de forma que esconde a causa |
+| `médio` | Bug em borda improvável, ou falta de teste em lógica não trivial |
 | `baixo` | Clareza, nome, duplicação, comentário desatualizado |
 
-Gravidade mede impacto; confiança mede sustentação. Hipótese não conta como bug confirmado.
-Procure autorização nos chamadores e controles compartilhados antes de concluir que falta
-validação. Não invente reprodução ou teste executado; declare prova não executada.
+Gravidade mede impacto; confiança mede sustentação. Hipótese não é bug confirmado. Antes de
+concluir que falta validação, procure-a nos chamadores. Não invente reprodução nem teste
+executado.
 
-Exemplos: acesso entre tenants reproduzido é confirmado, confiança alta; caminho sem
-reprodução é hipótese pendente; autorização no chamador que nega acesso refuta a suspeita.
-Registre a contraprova e descarte a alegação com motivo, sem inventar bug.
+## Arquivo e saída
 
-Não invente achado para encher a lista. Rodada sem achado `crítico` nem `alto` é resultado
-válido e é o que fecha o projeto.
+Grave `.stilo/review-NN.md`, com `NN` igual a `reviewRound` + 1 em dois dígitos, sem
+sobrescrever os anteriores: a sequência é o histórico. Cabeçalho com alvo, cobertura,
+exclusões e documentos usados; depois, resumo por gravidade, achados e a tabela dos
+critérios do spec.
 
-## Arquivo de review
+Critério de saída: repetir `REVIEW → FIX` até uma rodada sem achado `crítico` nem `alto`.
 
-Grave sempre em `.stilo/review-NN.md`, com `NN` igual a `reviewRound` + 1, com dois
-dígitos: `review-01.md`, `review-02.md`. Nunca sobrescreva um review anterior — a
-sequência é o histórico do que já foi encontrado.
-
-```markdown
-# Review NN — <projeto>
-
-Revisado: <commits ou snapshot staged/unstaged/novos com hashes>
-Cobertura e exclusões: <arquivos, cenários e limitações>
-Contra: `spec.md`, `plan.md`
-
-## Resumo
-
-<N> achados: <n> crítico, <n> alto, <n> médio, <n> baixo.
-
-## Achados
-
-### 1. ...
-(formato acima)
-
-## Critérios de aceite do spec
-
-| # | Critério | Situação |
-|---|---|---|
-| 1 | ... | atendido / parcial / ausente |
-```
-
-Em `FIX`, mude o **Estado** de cada achado para `corrigido` (com o arquivo e a linha da
-correção) ou `descartado` (com o motivo). Um achado descartado sem motivo escrito volta a
-aparecer na rodada seguinte.
-
-## Quando declarar `DONE`
-
-Só quando a rodada de `REVIEW` mais recente **não** produzir nenhum achado `crítico` nem
-`alto`, e todos os achados das rodadas anteriores estiverem `corrigido` ou `descartado`
-com motivo. Evidências obrigatórias pendentes também impedem DONE.
-
-Achados `médio` e `baixo` em aberto não impedem `DONE`, mas ficam listados no último
-review — é o que o projeto sabe sobre si mesmo.
+Os achados anteriores precisam estar `corrigido` ou `descartado` com motivo, e evidência
+obrigatória pendente também impede avançar. Achados `médio` e `baixo` abertos ficam
+listados no último review. Com achado `crítico` ou `alto`, grave `phase: "FIX"`; sem eles,
+`phase: "EDITORIAL_REVIEW"`.

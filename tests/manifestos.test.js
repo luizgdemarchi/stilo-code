@@ -82,7 +82,9 @@ test('nenhum comando ou skill público do Stilo é publicado', () => {
 test('nenhum arquivo publicado cita pacote preso a um único agente', () => {
   // Critério de aceite 10 do spec: § 4.1 proíbe citar o que não é portátil.
   const proibidos = ['code-review', 'frontend-design', 'skill-creator'];
-  const ignorar = new Set(['.git', '.superpowers', 'node_modules', 'tests', 'spec.md', 'plan.md']);
+  // THIRD_PARTY_NOTICES.md credita a origem do texto adaptado, como a licença exige
+  // (spec do ciclo 2026-11-02, R7.4): é atribuição, não indicação de uso.
+  const ignorar = new Set(['.git', '.superpowers', 'node_modules', 'tests', 'spec.md', 'plan.md', 'THIRD_PARTY_NOTICES.md']);
 
   function varre(dir, rel) {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

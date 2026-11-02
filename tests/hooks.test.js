@@ -32,16 +32,45 @@ function cenario(state) {
         : JSON.stringify(Object.assign({ version: 1, project: 'meu-app', phase: 'PLAN', reviewRound: 0 }, state))
     );
   } else fs.mkdirSync(projeto, { recursive: true });
-  return { raiz, projeto, statePath, home: path.join(raiz, 'home-stilo') };
+  return { raiz, projeto, statePath, home: path.join(raiz, 'home-stilo'), dados: path.join(raiz, 'dados-plugin') };
 }
 
+// O diretório de dados fica fora do projeto e é isolado por teste; sem ele, o
+// rastreio de sessão iria para o diretório de dados real de quem roda a suíte.
 function rodaHook(arquivo, { cwd, home, stdin, env }) {
   return spawnSync(process.execPath, [path.join(HOOKS, arquivo)], {
     cwd,
     input: stdin === undefined ? '' : stdin,
     encoding: 'utf8',
-    env: Object.assign({}, process.env, { STILO_HOME: home }, env || {}),
+    env: Object.assign(
+      {},
+      process.env,
+      { STILO_HOME: home, CLAUDE_PLUGIN_DATA: path.join(path.dirname(home), 'dados-plugin') },
+      env || {}
+    ),
   });
+}
+
+function modulo(nome) {
+  return fs.readFileSync(path.join(__dirname, '..', 'modules', nome), 'utf8').trim();
+}
+
+// Lista recursiva, para provar que um hook não grava nada dentro do projeto.
+function listagem(dir) {
+  const itens = [];
+  for (const nome of fs.readdirSync(dir).sort()) {
+    const caminho = path.join(dir, nome);
+    itens.push(caminho);
+    if (fs.statSync(caminho).isDirectory()) itens.push(...listagem(caminho));
+  }
+  return itens;
+}
+
+function grava(c, overrides) {
+  fs.writeFileSync(
+    c.statePath,
+    JSON.stringify(Object.assign({ version: 1, project: 'meu-app', phase: 'PLAN', reviewRound: 0 }, overrides))
+  );
 }
 
 test('SessionStart injeta contexto e estado do projeto', () => {
@@ -83,12 +112,15 @@ test('SessionStart reporta ambiguidade sem mandar criar projeto', () => {
   assert.doesNotMatch(r.stdout, /Nenhum `\.stilo\/state\.json` encontrado/);
 });
 
-test('SubagentStart envelopa o contexto automático', () => {
+test('SubagentStart envelopa o contexto reduzido do subagente', () => {
   const c = cenario({ phase: 'EXECUTE' });
   const r = rodaHook('stilo-subagent.js', { cwd: c.projeto, home: c.home });
   const saida = JSON.parse(r.stdout);
   assert.strictEqual(saida.hookSpecificOutput.hookEventName, 'SubagentStart');
-  assert.match(saida.hookSpecificOutput.additionalContext, /\*\*Fase:\*\* EXECUTE/);
+  const contexto = saida.hookSpecificOutput.additionalContext;
+  assert.match(contexto, /\*\*Fase:\*\* EXECUTE/);
+  assert.ok(contexto.includes(modulo('subagente.md')));
+  assert.ok(!contexto.includes('## Regra 0'));
 });
 
 test('UserPromptSubmit injeta a linha na mensagem comum e em prompt com barra', () => {
@@ -159,7 +191,7 @@ test('Codex recebe envelope JSON no SessionStart e no UserPromptSubmit', () => {
     env,
   }).stdout);
   assert.strictEqual(sub.hookSpecificOutput.hookEventName, 'SubagentStart');
-  assert.match(sub.hookSpecificOutput.additionalContext, /Stilo Code — pipeline de projeto/);
+  assert.match(sub.hookSpecificOutput.additionalContext, /\*\*Fase:\*\* PLAN/);
 });
 
 test('stdin vazio ou inválido não quebra o hook', () => {
@@ -178,4 +210,115 @@ test('cwd inválido no payload cai no cwd do processo', () => {
     stdin: JSON.stringify({ prompt: 'oi', cwd: '/nao/existe' }),
   });
   assert.match(r.stdout, /fase=PLAN/);
+});
+
+test('SessionStart resolve o projeto pelo cwd do payload', () => {
+  const c = cenario({ phase: 'SPEC' });
+  const fora = tmpdir();
+  const r = rodaHook('stilo-activate.js', {
+    cwd: fora,
+    home: c.home,
+    stdin: JSON.stringify({ session_id: 'sessao-cwd', cwd: c.projeto }),
+  });
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /\*\*Fase:\*\* SPEC/);
+});
+
+test('C24: troca de fase na sessão injeta os módulos da fase nova uma vez', () => {
+  const c = cenario({ phase: 'PLAN' });
+  const antes = listagem(c.projeto);
+  const sessao = JSON.stringify({ session_id: 'sessao-1', cwd: c.projeto, prompt: 'oi' });
+
+  const inicio = rodaHook('stilo-activate.js', { cwd: c.projeto, home: c.home, stdin: sessao });
+  assert.strictEqual(inicio.status, 0);
+  assert.ok(inicio.stdout.includes(modulo('plano.md')));
+
+  const mesmaFase = rodaHook('stilo-prompt.js', { cwd: c.projeto, home: c.home, stdin: sessao });
+  assert.match(mesmaFase.stdout, /^stilo: projeto=meu-app · fase=PLAN/);
+  assert.strictEqual(mesmaFase.stdout.includes('\n'), false);
+
+  grava(c, { phase: 'EXECUTE' });
+  const troca = rodaHook('stilo-prompt.js', { cwd: c.projeto, home: c.home, stdin: sessao });
+  assert.strictEqual(troca.status, 0);
+  assert.match(troca.stdout, /^stilo: projeto=meu-app · fase=EXECUTE/);
+  for (const nome of ['execucao.md', 'tdd.md']) assert.ok(troca.stdout.includes(modulo(nome)), nome);
+  assert.ok(!troca.stdout.includes(modulo('plano.md')));
+
+  const depois = rodaHook('stilo-prompt.js', { cwd: c.projeto, home: c.home, stdin: sessao });
+  assert.match(depois.stdout, /fase=EXECUTE/);
+  assert.strictEqual(depois.stdout.includes('\n'), false);
+  assert.ok(!depois.stdout.includes(modulo('execucao.md')));
+
+  // Outra sessão no mesmo projeto não herda o registro da primeira.
+  const outra = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ session_id: 'sessao-2', cwd: c.projeto }),
+  });
+  assert.ok(outra.stdout.includes(modulo('execucao.md')));
+
+  assert.deepStrictEqual(listagem(c.projeto), antes);
+  assert.ok(fs.readdirSync(path.join(c.dados, 'sessoes')).every((nome) => /^[0-9a-f]{16}\.json$/.test(nome)));
+});
+
+test('C24: sem session_id, a linha cita os caminhos dos módulos da fase', () => {
+  const c = cenario({ phase: 'EXECUTE' });
+  const antes = listagem(c.projeto);
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ prompt: 'oi', cwd: c.projeto }),
+  });
+  assert.strictEqual(r.status, 0);
+  assert.strictEqual(r.stdout.includes('\n'), false);
+  assert.match(r.stdout, / · módulos: /);
+  for (const nome of ['execucao.md', 'tdd.md']) {
+    assert.ok(r.stdout.includes(path.join(__dirname, '..', 'modules', nome)), nome);
+  }
+  assert.deepStrictEqual(listagem(c.projeto), antes);
+  assert.strictEqual(fs.existsSync(c.dados), false);
+});
+
+test('falha ao gravar o registro da sessão cai nos caminhos dos módulos', () => {
+  const c = cenario({ phase: 'FIX' });
+  // Um arquivo no lugar do diretório de dados impede criar a pasta de sessões.
+  fs.writeFileSync(c.dados, 'não é diretório');
+  const r = rodaHook('stilo-prompt.js', {
+    cwd: c.projeto,
+    home: c.home,
+    stdin: JSON.stringify({ session_id: 'sessao-x', cwd: c.projeto }),
+  });
+  assert.strictEqual(r.status, 0);
+  assert.strictEqual(r.stdout.includes('\n'), false);
+  assert.ok(r.stdout.includes(path.join(__dirname, '..', 'modules', 'correcao.md')));
+});
+
+test('registro de sessão poda arquivos antigos e ignora o que não é dele', () => {
+  const { registrarFase, faseMudou, dadosDir } = require('../hooks/stilo-sessao.js');
+  const anterior = process.env.CLAUDE_PLUGIN_DATA;
+  const dados = tmpdir();
+  process.env.CLAUDE_PLUGIN_DATA = dados;
+  try {
+    assert.strictEqual(dadosDir(), dados);
+    const sessoes = path.join(dados, 'sessoes');
+    fs.mkdirSync(sessoes);
+    const velho = path.join(sessoes, '0123456789abcdef.json');
+    const alheio = path.join(sessoes, 'notas.json');
+    for (const arquivo of [velho, alheio]) {
+      fs.writeFileSync(arquivo, '{}');
+      const oitoDias = new Date(Date.now() - 8 * 24 * 3600 * 1000);
+      fs.utimesSync(arquivo, oitoDias, oitoDias);
+    }
+    assert.strictEqual(faseMudou('s', { phase: 'PLAN' }), true);
+    assert.strictEqual(registrarFase('s', { phase: 'PLAN' }), true);
+    assert.strictEqual(faseMudou('s', { phase: 'PLAN' }), false);
+    assert.strictEqual(faseMudou('s', { phase: 'EXECUTE' }), true);
+    assert.strictEqual(fs.existsSync(velho), false);
+    assert.strictEqual(fs.existsSync(alheio), true);
+    assert.strictEqual(registrarFase('', { phase: 'PLAN' }), false);
+    assert.doesNotThrow(() => faseMudou(undefined, null));
+  } finally {
+    if (anterior === undefined) delete process.env.CLAUDE_PLUGIN_DATA;
+    else process.env.CLAUDE_PLUGIN_DATA = anterior;
+  }
 });

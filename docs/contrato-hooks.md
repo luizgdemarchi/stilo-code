@@ -79,7 +79,54 @@ Detalhes que só aparecem lendo o código:
 Dentro do JS, o ponytail nunca lê `CLAUDE_PLUGIN_ROOT`: resolve tudo por `__dirname`
 (`ponytail-instructions.js:9`). Mais robusto, porque funciona também em checkout solto. O Stilo Code faz igual, com `CLAUDE_PLUGIN_ROOT` só como sobreposição.
 
-## 4. Regra de falha
+## 4. O que cada hook do Stilo Code injeta
+
+Contrato do ciclo 2026-11-02. Os limites são conferidos pelos testes.
+
+| Evento | Lê do stdin | Injeta |
+|---|---|---|
+| `SessionStart` | `session_id`, `cwd` | `AGENTS.md`, bloco de estado, nota do `gh` quando falta, módulos da fase; até 19.500 caracteres, sem compactação |
+| `UserPromptSubmit` | `session_id`, `cwd` | linha de estado; na troca de fase, também os módulos da fase nova |
+| `SubagentStart` | nada | contexto reduzido do subagente, até 6.000 caracteres |
+
+O `SessionStart` passou a ler o stdin para saber a sessão e o `cwd`. Ele usa o mesmo
+`readStdinJson` do `UserPromptSubmit`, com o timeout de 1 segundo da regra 2 da seção 1:
+stdin vazio ou que nunca fecha cai no `cwd` do processo e segue sem registro de sessão.
+
+### Contexto do subagente
+
+Cabeçalho com projeto, fase e ciclo; `modules/subagente.md` inteiro (papel, proibições e
+formato do relato); e o essencial da fase, extraído por título:
+
+- `## O que nunca tocar`, de `enxuto.md`, quando o nível da fase não é `off`;
+- `tdd.md` inteiro, em `EXECUTE` e `FIX`;
+- `## Formato de um achado`, de `revisor.md`, em `REVIEW`;
+- `## Formato do achado editorial`, de `revisor-editorial.md`, em `EDITORIAL_REVIEW`.
+
+Esses títulos são contrato: renomear um deles tira a seção do subagente. Sem projeto, o
+subagente não recebe nada; com estado ilegível, inválido ou ambíguo, recebe só a linha de
+aviso.
+
+### Rastreio de sessão e troca de fase
+
+O `SessionStart` grava a fase injetada em `<dados>/sessoes/<id>.json`, em que `<id>` são os
+16 primeiros dígitos hexadecimais do SHA-256 do `session_id`. `<dados>` é
+`CLAUDE_PLUGIN_DATA`, `PLUGIN_DATA` ou `os.tmpdir()/stilo-code`, nessa ordem. Nada vai para
+dentro do projeto.
+
+A cada `UserPromptSubmit`, o hook compara a fase do estado com a registrada:
+
+- mesma fase: só a linha de estado;
+- fase nova, ou registro ausente: a linha, os módulos da fase nova e o registro atualizado;
+- sem `session_id`, ou sem conseguir gravar: a linha seguida de ` · módulos: ` e dos
+  caminhos absolutos dos módulos, para o agente lê-los.
+
+A gravação poda, em melhor esforço, os registros com mais de 7 dias, e só os que têm o nome
+de registro (16 hexadecimais e `.json`). No temporário do sistema, o hook recusa pasta que
+seja link ou que pertença a outro usuário, e cai no fallback de caminhos. Nenhuma dessas
+funções lança.
+
+## 5. Regra de falha
 
 Todo `writeHookOutput` do ponytail está dentro de `try/catch` que engole a exceção
 (`ponytail-activate.js:92-96`, `ponytail-subagent.js:26-28`), e todo erro de leitura de

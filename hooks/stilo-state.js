@@ -6,7 +6,6 @@
 // e retornam diagnóstico explícito.
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const STATE_DIR = '.stilo';
@@ -18,6 +17,8 @@ const FASES = [
 ];
 const NIVEIS = ['off', 'leve', 'pleno'];
 const ENXUTO_VALIDOS = ['auto', ...NIVEIS];
+// O id do ciclo vira nome de pasta em docs/ciclos/: só minúsculas, dígitos e hífen.
+const CICLO_ID = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
 // Nível de enxuto por fase quando state.enxuto é "auto" (AGENTS.md § 6).
 const ENXUTO_POR_FASE = {
@@ -31,42 +32,6 @@ const ENXUTO_POR_FASE = {
   EDITORIAL_FIX: 'pleno',
   DONE: 'off',
 };
-
-// STILO_HOME existe para os testes trocarem o home sem mexer no do usuário.
-function stiloHome() {
-  return process.env.STILO_HOME || path.join(os.homedir(), STATE_DIR);
-}
-
-function offFlagPath() {
-  return path.join(stiloHome(), 'off');
-}
-
-function isOff() {
-  try {
-    return fs.existsSync(offFlagPath());
-  } catch (e) {
-    return false;
-  }
-}
-
-// Melhor esforço: devolve true quando o flag ficou no estado pedido.
-function setOff(off) {
-  try {
-    if (off) {
-      fs.mkdirSync(stiloHome(), { recursive: true });
-      fs.writeFileSync(offFlagPath(), '');
-    } else {
-      try {
-        fs.unlinkSync(offFlagPath());
-      } catch (e) {
-        if (e.code !== 'ENOENT') throw e;
-      }
-    }
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
 
 function candidato(dir) {
   return path.join(dir, STATE_DIR, STATE_FILE);
@@ -172,6 +137,9 @@ function validateState(state) {
   if (state.enxuto !== undefined && (typeof state.enxuto !== 'string' || !ENXUTO_VALIDOS.includes(state.enxuto))) {
     errors.push(`enxuto deve ser um de: ${ENXUTO_VALIDOS.join(', ')}`);
   }
+  if (state.cycle !== undefined && (typeof state.cycle !== 'string' || !CICLO_ID.test(state.cycle))) {
+    errors.push('cycle deve casar ^[a-z0-9][a-z0-9-]{1,63}$');
+  }
   return { valid: errors.length === 0, errors };
 }
 
@@ -248,31 +216,39 @@ function writeCheckpoint(checkpointPath, checkpoint) {
   return writeJsonAtomic(checkpointPath, completo) ? completo : null;
 }
 
-const CICLO_SLUG = /^[a-z0-9][a-z0-9-]{1,48}$/;
-
-function validateCycle(value) {
-  return Boolean(
-    value &&
-      value.version === 1 &&
-      typeof value.id === 'string' && CICLO_SLUG.test(value.id) &&
-      typeof value.started === 'string' && value.started.trim() &&
-      Number.isInteger(value.baseReview) && value.baseReview >= 0 &&
-      typeof value.updated === 'string' && value.updated.trim()
-  );
-}
-
-function readCycle(cyclePath) {
-  const value = readJsonObject(cyclePath);
-  return validateCycle(value) ? value : null;
-}
-
-function writeCycle(cyclePath, cycle) {
-  const timestamp = agoraUtc();
-  const completo = Object.assign({ version: 1, started: timestamp }, cycle, {
-    updated: timestamp,
-  });
-  if (!validateCycle(completo)) return null;
-  return writeJsonAtomic(cyclePath, completo) ? completo : null;
+// Documentos ativos do ciclo. Sem `cycle` vale o layout legado, com spec.md e plan.md na
+// raiz do projeto. Na trilha curta, ciclo.md substitui os dois e identifica a trilha.
+function documentosDoCiclo(projectRoot, state) {
+  const cycle = state && typeof state.cycle === 'string' && CICLO_ID.test(state.cycle) ? state.cycle : null;
+  if (!cycle) {
+    return {
+      cycle: null,
+      trilha: 'legado',
+      dir: null,
+      spec: path.join(projectRoot, 'spec.md'),
+      plan: path.join(projectRoot, 'plan.md'),
+      ciclo: null,
+      design: null,
+    };
+  }
+  const dir = path.join(projectRoot, 'docs', 'ciclos', cycle);
+  const existe = (nome) => {
+    try {
+      return fs.existsSync(path.join(dir, nome));
+    } catch (e) {
+      return false;
+    }
+  };
+  const curta = existe('ciclo.md');
+  return {
+    cycle,
+    trilha: curta ? 'curta' : 'completa',
+    dir,
+    spec: curta ? null : path.join(dir, 'spec.md'),
+    plan: curta ? null : path.join(dir, 'plan.md'),
+    ciclo: curta ? path.join(dir, 'ciclo.md') : null,
+    design: existe('design.md') ? path.join(dir, 'design.md') : null,
+  };
 }
 
 // O campo enxuto legado é aceito para compatibilidade, mas o nível efetivo vem
@@ -316,25 +292,18 @@ function resolution(status, state, statePath, caminhos, errors = [], error = nul
 }
 
 module.exports = {
-  CICLO_SLUG,
   ENXUTO_POR_FASE,
   FASES,
   NIVEIS,
+  documentosDoCiclo,
   findStateFiles,
-  isOff,
   normalizeFase,
-  offFlagPath,
   readCheckpoint,
-  readCycle,
   readState,
   resolveEnxuto,
   resolveProjeto,
-  setOff,
-  stiloHome,
   validateCheckpoint,
-  validateCycle,
   validateState,
   writeCheckpoint,
-  writeCycle,
   writeState,
 };

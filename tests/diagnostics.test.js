@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { diagnoseProject, readCycle, readEvidence } = require('../hooks/stilo-diagnostics.js');
+const { diagnoseProject, readEvidence } = require('../hooks/stilo-diagnostics.js');
 
 function tmpdir() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-doctor-')));
@@ -32,6 +32,7 @@ test('diagnoseProject é somente leitura e relata artefatos da fase', () => {
   fs.writeFileSync(path.join(projeto, 'plan.md'), '# Plano\n');
   fs.writeFileSync(path.join(stilo, 'review-02.md'), '# Review 02\n');
   fs.writeFileSync(path.join(stilo, 'checkpoint.json'), '{ "task": "T2" }');
+  // Legado: o ciclo vem só do state.json; um cycle.json antigo é ignorado.
   fs.writeFileSync(path.join(stilo, 'cycle.json'), '{ "id": "retomada" }');
   fs.mkdirSync(path.join(projeto, 'docs'));
   fs.writeFileSync(path.join(projeto, 'docs', 'aceite.md'), '# Evidências\n');
@@ -50,7 +51,10 @@ test('diagnoseProject é somente leitura e relata artefatos da fase', () => {
     ]
   );
   assert.strictEqual(diagnostico.checkpoint.status, 'present');
-  assert.strictEqual(diagnostico.cycle.status, 'present');
+  assert.deepStrictEqual(
+    (({ status, id, trilha, documents }) => ({ status, id, trilha, documents }))(diagnostico.cycle),
+    { status: 'absent', id: null, trilha: 'legado', documents: [] }
+  );
   assert.strictEqual(diagnostico.evidence.status, 'present');
   assert.deepStrictEqual(fs.readdirSync(stilo).sort(), antes);
 });
@@ -192,46 +196,66 @@ test('docs/aceite registra os 54 critérios e retira o smoke OpenCode', () => {
   assert.match(openCode.result, /§ 18/);
 });
 
-test('readCycle tolera campos legados, rejeita id inseguro e diagnóstico lista documentos do ciclo', () => {
+test('diagnóstico confere os documentos do ciclo na trilha completa', () => {
   const raiz = tmpdir();
-  const legadoPath = path.join(raiz, 'legado.json');
-  fs.writeFileSync(legadoPath, '{ "id": "ciclo-legado" }');
-  assert.deepStrictEqual(
-    (({ id, started, baseReview, errors }) => ({ id, started, baseReview, errors }))(readCycle(legadoPath)),
-    {
-      id: 'ciclo-legado',
-      started: null,
-      baseReview: null,
-      errors: ['started ausente ou vazio', 'baseReview ausente ou inválido'],
-    }
-  );
-
-  const inseguroPath = path.join(raiz, 'inseguro.json');
-  fs.writeFileSync(inseguroPath, '{ "id": "../fora", "started": "2026-09-08T00:00:00Z", "baseReview": 4 }');
-  assert.strictEqual(readCycle(inseguroPath).status, 'invalid');
-
-  const { projeto, stilo } = criaProjeto(raiz, estado({ phase: 'REVIEW', reviewRound: 0 }), 'ciclo');
-  fs.writeFileSync(
-    path.join(stilo, 'cycle.json'),
-    '{ "id": "2026-09-07-retomada-confiavel-governanca", "started": "2026-09-08T00:00:00Z", "baseReview": 4 }'
-  );
-  const specDir = path.join(projeto, 'docs', 'superpowers', 'specs');
-  const planDir = path.join(projeto, 'docs', 'superpowers', 'plans');
-  fs.mkdirSync(specDir, { recursive: true });
-  fs.mkdirSync(planDir, { recursive: true });
-  fs.writeFileSync(path.join(specDir, '2026-09-04-ciclo-anterior-design.md'), '# anterior\n');
-  fs.writeFileSync(path.join(specDir, '2026-09-07-retomada-confiavel-governanca-design.md'), '# atual\n');
-  fs.writeFileSync(path.join(planDir, '2026-09-04-ciclo-anterior-plan.md'), '# anterior\n');
-  fs.writeFileSync(path.join(planDir, '2026-09-07-retomada-confiavel-governanca-plan.md'), '# atual\n');
+  const id = '2026-11-02-login';
+  const { projeto, stilo } = criaProjeto(raiz, estado({ phase: 'REVIEW', reviewRound: 0, cycle: id }));
+  const dir = path.join(projeto, 'docs', 'ciclos', id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'spec.md'), '# Spec\n');
+  // Spec na raiz não conta: com ciclo, só valem os documentos do ciclo.
+  fs.writeFileSync(path.join(projeto, 'spec.md'), '# Spec legado\n');
+  fs.writeFileSync(path.join(stilo, 'cycle.json'), '{ "id": "outro-ciclo" }');
+  const antes = fs.readdirSync(stilo).sort();
 
   const diagnostico = diagnoseProject(projeto);
 
   assert.deepStrictEqual(
-    diagnostico.cycle.documents.map((document) => [document.name, document.status]),
-    [['spec do ciclo', 'ok'], ['plano do ciclo', 'ok']]
+    diagnostico.checks.map((check) => [check.name, check.status]),
+    [
+      [`docs/ciclos/${id}/spec.md`, 'ok'],
+      [`docs/ciclos/${id}/plan.md`, 'missing'],
+    ]
   );
-  assert.strictEqual(fs.existsSync(path.join(specDir, '2026-09-04-ciclo-anterior-design.md')), true);
-  assert.strictEqual(fs.existsSync(path.join(planDir, '2026-09-04-ciclo-anterior-plan.md')), true);
+  assert.deepStrictEqual(
+    (({ status, id: ciclo, trilha }) => ({ status, id: ciclo, trilha }))(diagnostico.cycle),
+    { status: 'present', id, trilha: 'completa' }
+  );
+  assert.deepStrictEqual(
+    diagnostico.cycle.documents.map((document) => [document.name, document.status]),
+    [['spec', 'ok'], ['plano', 'missing']]
+  );
+  assert.deepStrictEqual(fs.readdirSync(stilo).sort(), antes);
+});
+
+test('diagnóstico usa ciclo.md na trilha curta, a partir de PLAN', () => {
+  const raiz = tmpdir();
+  const id = '2026-11-02-ajuste';
+  const { projeto, stilo } = criaProjeto(raiz, estado({ phase: 'SPEC', reviewRound: 0, cycle: id }));
+  const dir = path.join(projeto, 'docs', 'ciclos', id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'ciclo.md'), '## Spec\n\n## Plano\n');
+
+  const emSpec = diagnoseProject(projeto);
+  assert.deepStrictEqual(emSpec.checks, []);
+  assert.strictEqual(emSpec.cycle.trilha, 'curta');
+  assert.deepStrictEqual(
+    emSpec.cycle.documents.map((document) => [document.name, document.status]),
+    [['ciclo', 'ok']]
+  );
+
+  fs.writeFileSync(path.join(stilo, 'state.json'), JSON.stringify(estado({ phase: 'EXECUTE', reviewRound: 0, cycle: id })));
+  const emExecute = diagnoseProject(projeto);
+  assert.deepStrictEqual(
+    emExecute.checks.map((check) => [check.name, check.status]),
+    [[`docs/ciclos/${id}/ciclo.md`, 'ok']]
+  );
+});
+
+test('diagnóstico não lê cycle.json nem cita docs/superpowers', () => {
+  const fonte = fs.readFileSync(path.join(__dirname, '..', 'hooks', 'stilo-diagnostics.js'), 'utf8');
+  assert.doesNotMatch(fonte, /docs\/superpowers|'superpowers'/);
+  assert.doesNotMatch(fonte, /'cycle\.json'/);
 });
 
 test('readEvidence rejeita ID inesperado mesmo com todos os 54 presentes', () => {

@@ -1,9 +1,22 @@
 # Preparação do GitHub CLI
 
+Estas regras saíram do `AGENTS.md` no ciclo 2026-11-02: elas valiam em toda sessão, mas só
+importam quando falta o `gh`. Nesse caso, o hook do `SessionStart` injeta uma nota curta
+com o comando do preparador, e o agente segue este documento.
+
 A primeira ativação suportada do Stilo orienta o agente a executar o preparador interno,
 fora do timeout de 5 segundos dos hooks. `/plugin install` não é presumido como execução
 de scripts npm. Copiar AGENTS.md usa as ferramentas normais do agente para preparar gh;
 o arquivo sozinho não instala executáveis. Sem acesso, registrar a causa e próximo passo.
+
+Regras para o agente:
+
+- Detecte `gh --version` e reutilize o gh existente, sem atualizar.
+- Use `scripts/setup-github-cli.js` quando disponível; no modo manual, siga a tabela
+  abaixo.
+- Respeite as permissões do sistema e da sandbox; não eleve privilégio implicitamente.
+- `/clear`, resume e subagentes não justificam repetir a instalação.
+- Sem gh, o pipeline continua. Não crie projeto só para preparar a máquina.
 
 O preparador reutiliza gh existente sem atualizar. Detecta versão em até 1.000 ms por
 processo; instala uma vez, em até 180.000 ms, e só confirma sucesso após executar gh.

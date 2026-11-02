@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { resolveProjeto } = require('./stilo-state.js');
+const { documentosDoCiclo, resolveProjeto } = require('./stilo-state.js');
 
 const REQUIRED_EVIDENCE_CRITERIA = Array.from({ length: 54 }, (_, index) => String(index + 1));
 
@@ -148,41 +148,46 @@ function readEvidence(filePath) {
   return { status: 'present', path: filePath, criteria, errors, missing, duplicates };
 }
 
-function readCycle(filePath) {
-  const parsed = optionalJson(filePath);
-  if (parsed.status !== 'present') {
-    return Object.assign(parsed, { id: null, started: null, baseReview: null, errors: parsed.error ? [parsed.error] : [] });
+// Nome do artefato relativo à raiz do projeto, com `/` em qualquer sistema:
+// `spec.md` no legado, `docs/ciclos/<id>/spec.md` com ciclo.
+function nomeRelativo(projectRoot, filePath) {
+  return path.relative(projectRoot, filePath).split(path.sep).join('/');
+}
+
+// O ciclo vem do campo `cycle` do state.json; `.stilo/cycle.json` não é mais lido.
+function cycleInfo(documentos) {
+  const nomes = { spec: 'spec', plan: 'plano', ciclo: 'ciclo', design: 'design' };
+  return {
+    status: documentos.cycle ? 'present' : 'absent',
+    path: documentos.dir,
+    id: documentos.cycle,
+    trilha: documentos.trilha,
+    documents: documentos.cycle
+      ? Object.keys(nomes)
+          .filter((chave) => documentos[chave])
+          .map((chave) => fileCheck(nomes[chave], documentos[chave]))
+      : [],
+  };
+}
+
+// Mesmo mapeamento fase → artefato de antes: spec a partir de PLAN, plano a
+// partir de EXECUTE. Na trilha curta, o ciclo.md faz os dois papéis.
+function expectedArtifacts(projectRoot, state, documentos) {
+  const arquivos = [];
+  const desdePlan = ['PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'].includes(state.phase);
+  const desdeExecute = ['EXECUTE', 'REVIEW', 'FIX', 'DONE'].includes(state.phase);
+  if (documentos.trilha === 'curta') {
+    if (desdePlan) arquivos.push(documentos.ciclo);
+  } else {
+    if (desdePlan) arquivos.push(documentos.spec);
+    if (desdeExecute) arquivos.push(documentos.plan);
   }
-  const value = parsed.value;
-  const errors = [];
-  const candidateId = typeof value.id === 'string' ? value.id.trim() : '';
-  const id = /^[a-z0-9][a-z0-9-]{1,48}$/.test(candidateId) ? candidateId : null;
-  const started = typeof value.started === 'string' && value.started.trim() ? value.started.trim() : null;
-  const baseReview = Number.isInteger(value.baseReview) && value.baseReview >= 0 ? value.baseReview : null;
-  if (!id) errors.push('id ausente ou inválido');
-  if (!started) errors.push('started ausente ou vazio');
-  if (baseReview === null) errors.push('baseReview ausente ou inválido');
-  return { status: id ? 'present' : 'invalid', path: filePath, id, started, baseReview, errors };
-}
-
-function cycleDocuments(projectRoot, cycle) {
-  if (!cycle.id) return [];
-  return [
-    fileCheck('spec do ciclo', path.join(projectRoot, 'docs', 'superpowers', 'specs', `${cycle.id}-design.md`)),
-    fileCheck('plano do ciclo', path.join(projectRoot, 'docs', 'superpowers', 'plans', `${cycle.id}-plan.md`)),
-  ];
-}
-
-function expectedArtifacts(projectRoot, state) {
-  const names = [];
-  if (['PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'DONE'].includes(state.phase)) names.push('spec.md');
-  if (['EXECUTE', 'REVIEW', 'FIX', 'DONE'].includes(state.phase)) names.push('plan.md');
+  const checks = arquivos.map((arquivo) => fileCheck(nomeRelativo(projectRoot, arquivo), arquivo));
   if (['REVIEW', 'FIX', 'DONE'].includes(state.phase) && state.reviewRound > 0) {
-    names.push(`review-${String(state.reviewRound).padStart(2, '0')}.md`);
+    const review = `review-${String(state.reviewRound).padStart(2, '0')}.md`;
+    checks.push(fileCheck(review, path.join(projectRoot, '.stilo', review)));
   }
-  return names.map((name) =>
-    fileCheck(name, name.startsWith('review-') ? path.join(projectRoot, '.stilo', name) : path.join(projectRoot, name))
-  );
+  return checks;
 }
 
 function diagnoseProject(cwd) {
@@ -207,11 +212,11 @@ function diagnoseProject(cwd) {
   const projectRoot = path.dirname(stiloDir);
   base.projectRoot = projectRoot;
   base.checkpoint = optionalJson(path.join(stiloDir, 'checkpoint.json'));
-  base.cycle = readCycle(path.join(stiloDir, 'cycle.json'));
-  base.cycle.documents = cycleDocuments(projectRoot, base.cycle);
   base.evidence = readEvidence(path.join(projectRoot, 'docs', 'aceite.md'));
   if (projeto.status === 'valid') {
-    base.checks = expectedArtifacts(projectRoot, projeto.state);
+    const documentos = documentosDoCiclo(projectRoot, projeto.state);
+    base.cycle = cycleInfo(documentos);
+    base.checks = expectedArtifacts(projectRoot, projeto.state, documentos);
     if (projeto.state.phase === 'DONE') {
       const pending = base.evidence.criteria
         .filter((criterion) => criterion.type === 'pendente')
@@ -233,4 +238,4 @@ function diagnoseProject(cwd) {
   return base;
 }
 
-module.exports = { diagnoseProject, readCycle, readEvidence };
+module.exports = { diagnoseProject, readEvidence };

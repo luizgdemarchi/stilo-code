@@ -4,7 +4,28 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { selectContextBlocks } = require('../hooks/stilo-context.js');
-const { buildFullContext, buildInjectedContext } = require('../hooks/stilo-instructions.js');
+const { FASES } = require('../hooks/stilo-state.js');
+const { buildSetupNote } = require('../hooks/stilo-setup.js');
+const { buildFullContext, buildInjectedContext, modulosDaFase, pluginRoot } = require('../hooks/stilo-instructions.js');
+
+// Âncoras do AGENTS.md que a compactação protege (contrato do plano, T08).
+const ANCORAS = [
+  '## Regra 0',
+  '## Regra 1',
+  '## 3. Estado em disco',
+  '## 4. Retomada verificável',
+  '## 6. Módulos',
+  '## 7. Execução segura',
+  '## Estado do Stilo Code',
+];
+
+function blocos(texto) {
+  return texto.split(/\n{2}---\n{2}|\n(?=#{1,2}\s)/).map((s) => s.trim()).filter(Boolean);
+}
+
+function modulo(nome) {
+  return fs.readFileSync(path.join(__dirname, '../modules', nome), 'utf8');
+}
 
 test('seleciona blocos determinísticos dentro do orçamento', () => {
   const texto = ['essencial 1', 'opcional grande '.repeat(20), 'essencial 2'].join('\n\n---\n\n');
@@ -31,25 +52,12 @@ test('texto sem blocos ainda é selecionável sem resumir', () => {
   assert.strictEqual(selectContextBlocks('linha única', { budget: 40 }), 'linha única');
 });
 
-test('contexto automático preserva os módulos e usa fallback quando os protegidos não cabem', () => {
-  const state = { version: 1, project: 'x', phase: 'REVIEW', reviewRound: 1, enxuto: 'auto' };
-  const completo = buildFullContext(state);
-  const automatico = buildInjectedContext(state);
-  if (automatico.length > 16000) assert.strictEqual(automatico, completo);
-  else assert.ok(automatico.length <= completo.length);
-  assert.match(automatico, /Estado do Stilo Code/);
-  assert.match(automatico, /Módulo: Revisor/);
-  assert.match(automatico, /Formato de um achado/);
-  assert.match(automatico, /Quando declarar `DONE`/);
-  assert.match(automatico, /Travas de segurança/);
-});
-
 test('fonte ausente faz fallback byte a byte para contexto completo', () => {
   const anterior = process.env.CLAUDE_PLUGIN_ROOT;
   const vazio = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-context-'));
   process.env.CLAUDE_PLUGIN_ROOT = vazio;
   try {
-    const state = { version: 1, project: 'x', phase: 'PLAN', reviewRound: 0, enxuto: 'auto' };
+    const state = { version: 1, project: 'x', phase: 'PLAN', reviewRound: 0 };
     assert.strictEqual(buildInjectedContext(state), buildFullContext(state));
   } finally {
     if (anterior === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
@@ -64,18 +72,19 @@ test('estado inválido faz fallback byte a byte para contexto completo', () => {
   assert.strictEqual(buildInjectedContext(state, caminhos), buildFullContext(state, caminhos));
 });
 
-for (const phase of ['PLAN', 'EXECUTE', 'REVIEW', 'FIX']) {
-  test(`política integral no contexto de ${phase}`, () => {
-    const state = { version: 1, project: 'x', phase, reviewRound: 11 };
-    const modulo = fs.readFileSync(path.join(__dirname, '../modules/orquestracao.md'), 'utf8');
-    for (const build of [buildFullContext, buildInjectedContext]) {
-      const contexto = build(state);
-      const blocos = modulo.split(/\n{2}---\n{2}|\n(?=#{1,2}\s)/)
-        .map(s => s.trim()).filter(Boolean);
-      for (const bloco of blocos) assert.ok(contexto.includes(bloco), phase);
+test('cada fase preserva as âncoras e os blocos dos seus módulos; orquestração só no PLAN', () => {
+  const orquestracao = blocos(modulo('orquestracao.md'));
+  for (const phase of FASES) {
+    const state = { version: 1, project: 'x', phase, reviewRound: 11, updated: '2026-01-01T00:00:00Z' };
+    const contexto = buildInjectedContext(state);
+    for (const ancora of ANCORAS) assert.ok(contexto.includes(ancora), `${phase} ${ancora}`);
+    for (const nome of modulosDaFase(state)) {
+      for (const bloco of blocos(modulo(nome))) assert.ok(contexto.includes(bloco), `${phase} ${nome}`);
     }
-  });
-}
+    const temOrquestracao = orquestracao.every((bloco) => contexto.includes(bloco));
+    assert.strictEqual(temOrquestracao, phase === 'PLAN', phase);
+  }
+});
 
 test('política maior que o orçamento faz fallback byte a byte para contexto completo', () => {
   const anterior = process.env.CLAUDE_PLUGIN_ROOT;
@@ -88,7 +97,7 @@ test('política maior que o orçamento faz fallback byte a byte para contexto co
   );
   process.env.CLAUDE_PLUGIN_ROOT = raiz;
   try {
-    const state = { version: 1, project: 'x', phase: 'PLAN', reviewRound: 11, enxuto: 'auto' };
+    const state = { version: 1, project: 'x', phase: 'PLAN', reviewRound: 11 };
     const completo = buildFullContext(state);
     assert.match(completo, /Bloco extenso/);
     assert.strictEqual(buildInjectedContext(state), completo);
@@ -99,25 +108,43 @@ test('política maior que o orçamento faz fallback byte a byte para contexto co
   }
 });
 
-for (const phase of ['SPEC', 'PLAN', 'EXECUTE', 'REVIEW', 'FIX']) {
-  test(`compactação de ${phase} preserva estado em disco e gatilhos de módulos`, () => {
-    const state = { version: 1, project: 'x', phase, reviewRound: 12, enxuto: 'auto', updated: '2026-01-01T00:00:00Z' };
-    const contexto = buildInjectedContext(state);
-    assert.match(contexto, /## 3\. Estado em disco/);
-    assert.match(contexto, /ISO 8601/);
-    assert.match(contexto, /## 5\. Módulos/);
-    assert.match(contexto, /modules\/frontend\.md/);
-  });
-}
-
-// REVIEW protege mais que o orçamento e usa o contexto completo; as demais fases compactam.
-for (const phase of ['PLAN', 'EXECUTE', 'REVIEW', 'FIX']) test(`${phase} com checkpoint no limite preserva estado e checkpoint`, () => {
-  const projeto = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-checkpoint-'));
+test('ruleset acima do orçamento compacta sem perder âncoras nem módulos', () => {
+  const anterior = process.env.CLAUDE_PLUGIN_ROOT;
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-compacta-'));
+  fs.writeFileSync(
+    path.join(raiz, 'AGENTS.md'),
+    fs.readFileSync(path.join(__dirname, '../AGENTS.md'), 'utf8') +
+      '\n\n## 99. Seção descartável\n\n' + 'texto opcional '.repeat(800) + '\n'
+  );
+  fs.cpSync(path.join(__dirname, '../modules'), path.join(raiz, 'modules'), { recursive: true });
+  process.env.CLAUDE_PLUGIN_ROOT = raiz;
   try {
+    const state = { version: 1, project: 'x', phase: 'EXECUTE', reviewRound: 0 };
+    const injetado = buildInjectedContext(state);
+    assert.ok(injetado.length <= 19500, String(injetado.length));
+    assert.doesNotMatch(injetado, /Seção descartável/);
+    for (const ancora of ANCORAS) assert.ok(injetado.includes(ancora), ancora);
+    for (const nome of modulosDaFase(state)) {
+      for (const bloco of blocos(modulo(nome))) assert.ok(injetado.includes(bloco), nome);
+    }
+  } finally {
+    if (anterior === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
+    else process.env.CLAUDE_PLUGIN_ROOT = anterior;
+    fs.rmSync(raiz, { recursive: true, force: true });
+  }
+});
+
+// Pior caso do bloco de estado: campos acima dos limites de `sanitiza`, checkpoint
+// no limite, nota do gh e design.md no ciclo.
+for (const phase of FASES) test(`${phase} com checkpoint no limite cabe sem compactar`, () => {
+  const projeto = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-checkpoint-')));
+  try {
+    const cycle = '2026-11-02-pior-caso';
     fs.mkdirSync(path.join(projeto, '.stilo'));
+    fs.mkdirSync(path.join(projeto, 'docs', 'ciclos', cycle), { recursive: true });
+    fs.writeFileSync(path.join(projeto, 'docs', 'ciclos', cycle, 'design.md'), '# design\n');
     const statePath = path.join(projeto, '.stilo', 'state.json');
-    // Campos acima dos limites de `sanitiza`: mede o pior caso real do bloco de estado.
-    const state = { version: 1, project: 'x'.repeat(200), phase, reviewRound: 12, enxuto: 'auto', updated: '2026-01-01T00:00:00Z' };
+    const state = { version: 1, project: 'x'.repeat(200), phase, cycle, reviewRound: 12, editorialReviewRound: 4, updated: '2026-01-01T00:00:00Z' };
     fs.writeFileSync(statePath, JSON.stringify(state));
     fs.writeFileSync(path.join(projeto, '.stilo', 'checkpoint.json'), JSON.stringify({
       version: 1,
@@ -130,15 +157,16 @@ for (const phase of ['PLAN', 'EXECUTE', 'REVIEW', 'FIX']) test(`${phase} com che
       nextAction: 'a'.repeat(400),
       updated: '2026-01-01T00:00:00Z',
     }));
-    const caminhos = Object.assign([statePath], { statePath, status: 'valid' });
+    const caminhos = Object.assign([statePath], {
+      statePath,
+      status: 'valid',
+      setupNote: buildSetupNote(pluginRoot(), { status: 'absent' }),
+    });
     const completo = buildFullContext(state, caminhos);
     const injetado = buildInjectedContext(state, caminhos);
     assert.match(completo, /checkpoint/);
-    if (phase === 'REVIEW') assert.strictEqual(injetado, completo);
-    else assert.ok(injetado.length < completo.length, 'fallback: ' + injetado.length);
-    assert.match(injetado, /checkpoint/);
-    assert.match(injetado, /## 3\. Estado em disco/);
-    assert.match(injetado, /## 5\. Módulos/);
+    assert.strictEqual(injetado, completo);
+    assert.ok(injetado.length <= 19500, `${phase}: ${injetado.length}`);
   } finally {
     fs.rmSync(projeto, { recursive: true, force: true });
   }

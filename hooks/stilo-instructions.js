@@ -7,24 +7,64 @@
 const fs = require('fs');
 const path = require('path');
 
-const { normalizeFase, readCheckpoint, resolveEnxuto } = require('./stilo-state.js');
-const { selectContextBlocks } = require('./stilo-context.js');
+const { documentosDoCiclo, normalizeFase, readCheckpoint, resolveEnxuto } = require('./stilo-state.js');
+const { SEPARADOR, selectContextBlocks } = require('./stilo-context.js');
 
 const CONTEXT_BUDGET = 19500;
 
-// Próxima ação concreta de cada fase. É o campo que impede o agente de retomar
-// um projeto sabendo a fase mas não o que fazer nela.
+// Próxima ação concreta de cada fase, com os documentos ativos do ciclo. É o
+// campo que impede o agente de retomar um projeto sabendo a fase mas não o que
+// fazer nela.
 const PROXIMA_ACAO = {
-  BRAINSTORM: 'fazer perguntas até o usuário confirmar problema e escopo',
-  SPEC: 'escrever spec.md e submeter ao usuário',
-  PLAN: 'escrever plan.md com passos verificáveis',
-  EXECUTE: 'seguir plan.md na ordem, verificando cada passo',
-  REVIEW: 'revisar o diff contra spec.md e plan.md e gravar .stilo/review-NN.md',
-  FIX: 'resolver cada achado do review mais recente e voltar para REVIEW',
-  EDITORIAL_REVIEW: 'revisar todo o texto mantido e gravar .stilo/editorial-review-NN.md',
-  EDITORIAL_FIX: 'resolver os achados editoriais e voltar para EDITORIAL_REVIEW',
-  DONE: 'oferecer auditoria opcional de simplificação ou seguir para encerramento',
+  BRAINSTORM: () => 'fazer perguntas até o usuário confirmar problema, escopo e trilha',
+  SPEC: (d) => {
+    if (d.trilha === 'curta') return `escrever ${d.ciclo} com ## Spec e ## Plano e submeter ao usuário`;
+    const curta = d.cycle ? ` (trilha curta: docs/ciclos/${d.cycle}/ciclo.md)` : '';
+    return `escrever ${d.spec}${curta} e submeter ao usuário`;
+  },
+  PLAN: (d) => (d.trilha === 'curta' ? `conferir os passos de ${d.ciclo}` : `escrever ${d.plan} com passos verificáveis`),
+  EXECUTE: (d) => `seguir ${d.trilha === 'curta' ? d.ciclo : d.plan} na ordem, verificando cada passo`,
+  REVIEW: (d) => {
+    const base = d.trilha === 'curta' ? d.ciclo : `${d.spec} e ${d.plan}`;
+    return `revisar o diff contra ${base}${d.design ? ` e ${d.design}` : ''} e gravar .stilo/review-NN.md`;
+  },
+  FIX: () => 'resolver cada achado do review mais recente e voltar para REVIEW',
+  EDITORIAL_REVIEW: () => 'revisar o texto alterado no ciclo e gravar .stilo/editorial-review-NN.md',
+  EDITORIAL_FIX: () => 'resolver os achados editoriais e voltar para EDITORIAL_REVIEW',
+  DONE: () => 'oferecer a auditoria opcional e as opções de integração',
 };
+
+// Módulos que o hook injeta em cada fase (spec R7.1). enxuto.md entra à frente
+// quando o nível não é off, e frontend.md em EXECUTE e REVIEW quando o ciclo tem
+// design.md. Os demais o agente lê pelo gatilho (AGENTS.md § 6).
+const MODULOS_POR_FASE = {
+  BRAINSTORM: ['brainstorm.md'],
+  SPEC: ['especificacao.md'],
+  PLAN: ['orquestracao.md', 'plano.md'],
+  EXECUTE: ['execucao.md', 'tdd.md'],
+  REVIEW: ['revisor.md'],
+  FIX: ['tdd.md', 'depuracao.md', 'correcao.md'],
+  EDITORIAL_REVIEW: ['revisor-editorial.md'],
+  EDITORIAL_FIX: ['revisor-editorial.md'],
+  DONE: ['auditoria.md', 'encerramento.md'],
+};
+
+// Seção que o subagente recebe do módulo da fase. Os títulos são contrato
+// (decisão 3 do plano do ciclo 2026-11-02).
+const SECAO_DO_SUBAGENTE = {
+  REVIEW: ['revisor.md', '## Formato de um achado'],
+  EDITORIAL_REVIEW: ['revisor-editorial.md', '## Formato do achado editorial'],
+};
+
+// Âncoras do AGENTS.md que a compactação nunca descarta.
+const ANCORAS = [
+  'Regra 0',
+  'Regra 1',
+  '## 3. Estado em disco',
+  '## 4. Retomada verificável',
+  '## 6. Módulos',
+  '## 7. Execução segura',
+];
 
 const MODELO_ALVO = {
   BRAINSTORM: 'profundo',
@@ -50,6 +90,28 @@ function lerArquivo(...partes) {
   } catch (e) {
     return '';
   }
+}
+
+function modulosDir() {
+  return path.join(path.resolve(pluginRoot()), 'modules');
+}
+
+// Trecho de um módulo do título até o próximo título de nível 1 ou 2, fora de
+// bloco de código.
+function secao(texto, titulo) {
+  const linhas = String(texto || '').split('\n');
+  const inicio = linhas.findIndex((linha) => linha.trim() === titulo);
+  if (inicio < 0) return '';
+  let cerca = false;
+  let fim = linhas.length;
+  for (let i = inicio + 1; i < linhas.length; i += 1) {
+    if (/^\s*```/.test(linhas[i])) cerca = !cerca;
+    else if (!cerca && /^#{1,2}\s/.test(linhas[i])) {
+      fim = i;
+      break;
+    }
+  }
+  return linhas.slice(inicio, fim).join('\n').trim();
 }
 
 // Todo valor lido do state.json vira texto injetado no contexto do modelo, e o
@@ -157,19 +219,64 @@ function diagnosticoEstado(state, caminhos) {
   return null;
 }
 
-// Módulos que o hook injeta sozinho. frontend.md e autoria-skill.md ficam de
-// fora de propósito: o gatilho deles depende do que o diff toca e do que o
-// projeto é, coisas que só o agente sabe. O AGENTS.md § 5 diz quando lê-los.
-function modulosDaFase(state) {
+// Raiz do projeto: a pasta acima de `.stilo/`. Sem o caminho do estado (chamada
+// direta, sem projeto resolvido), vale o diretório atual.
+function raizDoProjeto(caminhos) {
+  return caminhos && caminhos.statePath ? path.dirname(path.dirname(caminhos.statePath)) : process.cwd();
+}
+
+// Documentos ativos do ciclo, relativos à raiz do projeto e com `/`.
+function documentosAtivos(state, caminhos) {
+  const raiz = raizDoProjeto(caminhos);
+  const docs = documentosDoCiclo(raiz, state);
+  const relativo = (arquivo) => (arquivo ? path.relative(raiz, arquivo).split(path.sep).join('/') : null);
+  return {
+    cycle: docs.cycle,
+    trilha: docs.trilha,
+    spec: relativo(docs.spec),
+    plan: relativo(docs.plan),
+    ciclo: relativo(docs.ciclo),
+    design: relativo(docs.design),
+  };
+}
+
+function listaDeDocumentos(d) {
+  return [d.spec, d.plan, d.ciclo, d.design].filter(Boolean).map((doc) => `\`${doc}\``).join(', ');
+}
+
+function modulosDaFase(state, projectRoot) {
+  if (!state || faseInvalida(state)) return [];
+  const f = fase(state);
   const modulos = [];
   if (resolveEnxuto(state) !== 'off') modulos.push('enxuto.md');
-  if (['PLAN', 'EXECUTE', 'REVIEW', 'FIX', 'EDITORIAL_REVIEW', 'EDITORIAL_FIX'].includes(fase(state))) {
-    modulos.push('orquestracao.md');
+  modulos.push(...MODULOS_POR_FASE[f]);
+  if ((f === 'EXECUTE' || f === 'REVIEW') && projectRoot && documentosDoCiclo(projectRoot, state).design) {
+    modulos.push('frontend.md');
   }
-  if (fase(state) === 'REVIEW') modulos.push('revisor.md');
-  if (['EDITORIAL_REVIEW', 'EDITORIAL_FIX'].includes(fase(state))) modulos.push('revisor-editorial.md');
-  if (fase(state) === 'DONE') modulos.push('auditoria.md');
   return modulos;
+}
+
+// Estado ilegível, inválido ou ambíguo não recebe módulos: o agente não deve
+// agir na fase até o arquivo ser corrigido.
+function podeInjetarModulos(state, caminhos) {
+  return Boolean(state) && !faseInvalida(state) && !diagnosticoEstado(state, caminhos) && !(caminhos && caminhos.length > 1);
+}
+
+function modulosDoContexto(state, caminhos) {
+  return podeInjetarModulos(state, caminhos) ? modulosDaFase(state, raizDoProjeto(caminhos)) : [];
+}
+
+// Texto dos módulos da fase, para a troca de fase dentro da sessão.
+function textoDosModulos(state, caminhos) {
+  return modulosDoContexto(state, caminhos)
+    .map((modulo) => lerArquivo('modules', modulo))
+    .filter(Boolean)
+    .join(SEPARADOR);
+}
+
+// Caminhos absolutos dos módulos da fase, quando o hook não pode injetá-los.
+function caminhosDosModulos(state, caminhos) {
+  return modulosDoContexto(state, caminhos).map((modulo) => path.join(modulosDir(), modulo));
 }
 
 // Uma linha, para o UserPromptSubmit — barato o bastante para repetir a cada
@@ -198,7 +305,9 @@ function buildStateLine(state, caminhos) {
   }
   const f = fase(state);
   const nome = sanitiza(state.project) || 'sem-nome';
-  return `stilo: projeto=${nome} · fase=${f} · enxuto=${resolveEnxuto(state)} · próxima: ${PROXIMA_ACAO[f]}`;
+  const docs = documentosAtivos(state, caminhos);
+  const ciclo = docs.cycle ? ` · ciclo=${docs.cycle}` : '';
+  return `stilo: projeto=${nome} · fase=${f}${ciclo} · enxuto=${resolveEnxuto(state)} · próxima: ${PROXIMA_ACAO[f](docs)}`;
 }
 
 function blocoEstado(state, caminhos) {
@@ -251,9 +360,10 @@ function blocoEstado(state, caminhos) {
       '',
       'Nenhum `.stilo/state.json` encontrado a partir do diretório atual.',
       '',
-      'Se o usuário pedir um projeto novo: crie a subpasta dele, crie',
-      '`<subpasta>/.stilo/state.json` em `phase: "BRAINSTORM"` (com `reviewRound: 0` e',
-      '`enxuto: "auto"`) e comece pelas perguntas. Não pule para a implementação.',
+      'Se o usuário pedir um projeto novo: crie a subpasta dele e `<subpasta>/.stilo/state.json` com',
+      '`{ "version": 1, "project": "<nome>", "phase": "BRAINSTORM", "cycle": "AAAA-MM-DD-assunto", "reviewRound": 0, "editorialReviewRound": 0, "updated": "<ISO 8601 UTC>" }`',
+      'e comece pelas perguntas. Não pule para a implementação.',
+      `Módulos sob demanda: ${modulosDir()}${path.sep}`,
     ].join('\n');
   }
 
@@ -272,14 +382,19 @@ function blocoEstado(state, caminhos) {
   }
 
   const f = fase(state);
+  const docs = documentosAtivos(state, caminhos);
   const linhas = [
     '## Estado do Stilo Code',
     '',
     `- **Projeto:** ${sanitiza(state.project) || 'sem-nome'}`,
     `- **Fase:** ${f}`,
-    `- **Próxima ação:** ${PROXIMA_ACAO[f]}`,
+    `- **Ciclo:** ${docs.cycle || 'nenhum'}`,
+    `- **Trilha:** ${docs.trilha}`,
+    `- **Documentos:** ${listaDeDocumentos(docs)}`,
+    `- **Próxima ação:** ${PROXIMA_ACAO[f](docs)}`,
     `- **Modelo alvo:** ${MODELO_ALVO[f]}`,
     `- **Modo Enxuto:** ${resolveEnxuto(state)}`,
+    `- **Módulos sob demanda:** ${modulosDir()}${path.sep}`,
   ];
   if (f === 'REVIEW' || f === 'FIX') {
     const rodada = Number(state.reviewRound) || 0;
@@ -312,12 +427,38 @@ function blocoEstado(state, caminhos) {
 function buildFullContext(state, caminhos) {
   const partes = [lerArquivo('AGENTS.md'), blocoEstado(state, caminhos)];
   if (caminhos && caminhos.setupNote) partes.push(caminhos.setupNote);
-  const podeAgir = !diagnosticoEstado(state, caminhos) && !(caminhos && caminhos.length > 1);
-  for (const modulo of podeAgir ? modulosDaFase(state) : []) {
+  for (const modulo of modulosDoContexto(state, caminhos)) {
     const texto = lerArquivo('modules', modulo);
     if (texto) partes.push(texto);
   }
-  return partes.filter(Boolean).join('\n\n---\n\n');
+  return partes.filter(Boolean).join(SEPARADOR);
+}
+
+// Contexto do SubagentStart: papel, proibições e o essencial da fase, sem o
+// núcleo. O subagente executa uma tarefa; estado, fases e usuário são do
+// coordenador.
+function buildSubagentContext(state, caminhos) {
+  if (!podeInjetarModulos(state, caminhos)) {
+    const problema = diagnosticoEstado(state, caminhos) || (caminhos && caminhos.length > 1) || faseInvalida(state);
+    return problema ? buildStateLine(state, caminhos) : '';
+  }
+  const f = fase(state);
+  const docs = documentosAtivos(state, caminhos);
+  const partes = [
+    [
+      '## Stilo Code — subagente',
+      '',
+      `- **Projeto:** ${sanitiza(state.project) || 'sem-nome'}`,
+      `- **Fase:** ${f}`,
+      `- **Ciclo:** ${docs.cycle || 'nenhum'}`,
+    ].join('\n'),
+    lerArquivo('modules', 'subagente.md'),
+  ];
+  if (resolveEnxuto(state) !== 'off') partes.push(secao(lerArquivo('modules', 'enxuto.md'), '## O que nunca tocar'));
+  if (f === 'EXECUTE' || f === 'FIX') partes.push(lerArquivo('modules', 'tdd.md'));
+  const extra = SECAO_DO_SUBAGENTE[f];
+  if (extra) partes.push(secao(lerArquivo('modules', extra[0]), extra[1]));
+  return partes.filter(Boolean).join(SEPARADOR);
 }
 
 function blocosDoContexto(texto) {
@@ -331,23 +472,17 @@ function buildInjectedContext(state, caminhos) {
   const completo = buildFullContext(state, caminhos);
   if (!lerArquivo('AGENTS.md')) return completo;
   if (caminhos && ['unreadable', 'invalid', 'ambiguous'].includes(caminhos.status)) return completo;
-  const modulosProtegidos = modulosDaFase(state).flatMap((modulo) =>
+  // Rede de segurança: os orçamentos dos módulos mantêm cada fase abaixo do
+  // limite, e a compactação só age se o AGENTS.md crescer além do previsto.
+  const modulosProtegidos = modulosDoContexto(state, caminhos).flatMap((modulo) =>
     blocosDoContexto(lerArquivo('modules', modulo))
   );
   const selecionado = selectContextBlocks(completo, {
     budget: CONTEXT_BUDGET,
     protected: [
-      'Regra 0',
-      'Regra 1',
-      '## Retomada verificável',
-      '## Preparação do ambiente',
+      ...ANCORAS,
       ...(caminhos && caminhos.setupNote ? [caminhos.setupNote] : []),
       '## Estado do Stilo Code',
-      'Travas de segurança',
-      'Negações',
-      'Mensagens de erro',
-      '## 3. Estado em disco',
-      '## 5. Módulos',
       ...modulosProtegidos,
     ],
   });
@@ -365,6 +500,7 @@ function buildAmbiguityNote(caminhos) {
 
 module.exports = {
   MODELO_ALVO,
+  MODULOS_POR_FASE,
   PROXIMA_ACAO,
   buildAmbiguityNote,
   buildCheckpointNote,
@@ -372,6 +508,10 @@ module.exports = {
   buildFullContext,
   buildInjectedContext,
   buildStateLine,
+  buildSubagentContext,
+  caminhosDosModulos,
   modulosDaFase,
+  podeInjetarModulos,
   pluginRoot,
+  textoDosModulos,
 };

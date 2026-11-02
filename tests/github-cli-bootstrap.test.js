@@ -29,7 +29,7 @@ test('SessionStart conserva estado inválido e funciona sem projeto, sem instala
   const dir=temp(t);fs.mkdirSync(path.join(dir,'.stilo'));fs.writeFileSync(path.join(dir,'.stilo/state.json'),'invalido');
   const before=fs.readFileSync(path.join(dir,'.stilo/state.json'),'utf8');
   const r=spawnSync(process.execPath,[path.join(__dirname,'../hooks/stilo-activate.js')],{cwd:dir,encoding:'utf8',env:{...process.env,STILO_HOME:path.join(dir,'home')}});
-  assert.equal(r.status,0);assert.match(r.stdout,/ilegível/);assert.match(r.stdout,/Preparação do ambiente/);
+  assert.equal(r.status,0);assert.match(r.stdout,/ilegível/);assert.match(r.stdout,/## 12\. Hosts e funcionamento automático/);
   assert.equal(fs.readFileSync(path.join(dir,'.stilo/state.json'),'utf8'),before);
   assert.equal(fs.existsSync(path.join(dir,'home/setup/github-cli.json')),false);
 });
