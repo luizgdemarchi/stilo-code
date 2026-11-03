@@ -137,27 +137,28 @@ test('ruleset acima do orçamento compacta sem perder âncoras nem módulos', ()
   }
 });
 
-// Pior caso do bloco de estado: campos acima dos limites de `sanitiza`, checkpoint
-// no limite, nota do gh e design.md no ciclo.
-for (const phase of FASES) test(`${phase} com checkpoint no limite cabe sem compactar`, () => {
+// Pior caso do bloco de estado: id de ciclo no máximo de CICLO_ID (64), campos de
+// texto acima dos limites de `sanitiza` com caracteres de 1, 2 e 3 bytes, checkpoint
+// legado no limite, nota do gh e os três documentos no ciclo (achado 1 do review-23).
+for (const phase of FASES) for (const ch of ['x', 'ã', '漢']) test(`${phase} com checkpoint no limite cabe sem compactar (${ch})`, () => {
   const projeto = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stilo-checkpoint-')));
   try {
-    const cycle = '2026-11-02-pior-caso';
+    const cycle = '2026-11-02-pior-caso-'.padEnd(64, 'x');
     fs.mkdirSync(path.join(projeto, '.stilo'));
     fs.mkdirSync(path.join(projeto, 'docs', 'ciclos', cycle), { recursive: true });
-    fs.writeFileSync(path.join(projeto, 'docs', 'ciclos', cycle, 'design.md'), '# design\n');
+    for (const doc of ['spec.md', 'plan.md', 'design.md']) fs.writeFileSync(path.join(projeto, 'docs', 'ciclos', cycle, doc), '# x\n');
     const statePath = path.join(projeto, '.stilo', 'state.json');
-    const state = { version: 1, project: 'x'.repeat(200), phase, cycle, reviewRound: 12, editorialReviewRound: 4, updated: '2026-01-01T00:00:00Z' };
+    const state = { version: 1, project: ch.repeat(200), phase, cycle, reviewRound: 12, editorialReviewRound: 4, updated: '2026-01-01T00:00:00Z' };
     fs.writeFileSync(statePath, JSON.stringify(state));
     fs.writeFileSync(path.join(projeto, '.stilo', 'checkpoint.json'), JSON.stringify({
       version: 1,
       cycle: 'ciclo',
-      phase,
-      task: 't'.repeat(200),
+      phase: 'EDITORIAL_REVIEW',
+      task: ch.repeat(200),
       decisions: ['d'],
       verified: ['v'],
-      pending: ['p'.repeat(400)],
-      nextAction: 'a'.repeat(400),
+      pending: [ch.repeat(400), ch.repeat(400)],
+      nextAction: ch.repeat(400),
       updated: '2026-01-01T00:00:00Z',
     }));
     const caminhos = Object.assign([statePath], {

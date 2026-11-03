@@ -120,13 +120,23 @@ function secao(texto, titulo) {
 // Todo valor lido do state.json vira texto injetado no contexto do modelo, e o
 // arquivo pode ter vindo junto num repositório clonado — é entrada de fora do
 // sistema. Colapsa espaço em branco (uma quebra de linha viraria uma instrução
-// solta no meio da injeção) e trunca.
+// solta no meio da injeção) e trunca. O limite é em bytes UTF-8, porque o Codex mede
+// a saída do hook em bytes: em caracteres, um texto de 3 bytes por letra triplicaria
+// o pior caso.
 function sanitiza(valor, limite) {
   const texto = String(valor === undefined || valor === null ? '' : valor)
     .replace(/\s+/g, ' ')
     .trim();
   const max = limite || 120;
-  return texto.length > max ? texto.slice(0, max) + '…' : texto;
+  if (Buffer.byteLength(texto, 'utf8') <= max) return texto;
+  let corte = '';
+  let bytes = 0;
+  for (const letra of texto) {
+    bytes += Buffer.byteLength(letra, 'utf8');
+    if (bytes > max) break;
+    corte += letra;
+  }
+  return corte + '…';
 }
 
 function checkpointPathFromState(statePath) {
@@ -150,10 +160,12 @@ function buildCheckpointNote(statePath, orientarAusente = true) {
     ].join('\n');
   }
   const pendencias = checkpoint.pending.length ? checkpoint.pending.join('; ') : 'nenhuma';
+  // Resumo do checkpoint legado: o arquivo tem o texto inteiro, e os tetos mantêm a
+  // parte `fase` do SessionStart abaixo de 10.000 bytes no pior caso.
   return [
-    `stilo: checkpoint · tarefa=${sanitiza(checkpoint.task)} · fase=${sanitiza(checkpoint.phase)}`,
-    `próxima: ${sanitiza(checkpoint.nextAction, 240)}`,
-    `pendências: ${sanitiza(pendencias, 300)}`,
+    `stilo: checkpoint · tarefa=${sanitiza(checkpoint.task, 80)} · fase=${sanitiza(checkpoint.phase)}`,
+    `próxima: ${sanitiza(checkpoint.nextAction, 120)}`,
+    `pendências: ${sanitiza(pendencias, 160)}`,
   ].join('\n');
 }
 

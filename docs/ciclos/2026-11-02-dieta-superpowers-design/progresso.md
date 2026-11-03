@@ -110,3 +110,14 @@ esperam autorização do usuário.
 - Pendente para o `review-23` olhar: `evidencias.md` ainda tem a tabela do contexto antes da
   divisão (medido depois: núcleo 8.733; fase 2.793 `BRAINSTORM` a 6.548 `REVIEW`; pior caso
   da fase 9.470 caracteres / 9.713 bytes); limite do Codex em tokens não verificado ao vivo.
+
+## REVIEW 23 — 2026-11-03 (sessão 4)
+
+- `review-23`: 0 crítico, 0 alto, 1 médio (parte `fase` passa de 10.000 bytes com ciclo de
+  64 caracteres e `checkpoint.json` legado no teto), 1 baixo (`evidencias.md` com números do
+  texto único). Limite do Codex conferido no código: ⌈bytes/4⌉ ≤ 2.500.
+- A pedido do usuário, `FIX` dos dois achados: `sanitiza` limita bytes, tetos do checkpoint
+  legado 80/120/160, teste de pior caso com ciclo de 64 e campos de 1 a 3 bytes (4 falhas
+  antes, 178/178 depois); `evidencias.md` com as duas partes e E2 conferindo prévia.
+- Estado: `REVIEW`, `reviewRound: 23`. Próximo: `review-24` conferindo este `FIX`; depois,
+  `editorial-review-01`, incremental desde `4ced739`.

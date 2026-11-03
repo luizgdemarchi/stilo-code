@@ -1,10 +1,10 @@
 {
   "version": 1,
   "project": "stilo-code",
-  "phase": "REVIEW",
-  "reviewRound": 22,
+  "phase": "EDITORIAL_REVIEW",
+  "reviewRound": 24,
   "enxuto": "auto",
-  "updated": "2026-11-02T22:09:35Z",
+  "updated": "2026-11-03T04:28:27Z",
   "editorialReviewRound": 0,
   "cycle": "2026-11-02-dieta-superpowers-design"
 }
