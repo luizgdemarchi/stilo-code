@@ -121,3 +121,13 @@ esperam autorização do usuário.
   antes, 178/178 depois); `evidencias.md` com as duas partes e E2 conferindo prévia.
 - Estado: `REVIEW`, `reviewRound: 23`. Próximo: `review-24` conferindo este `FIX`; depois,
   `editorial-review-01`, incremental desde `4ced739`.
+
+## REVIEW 24, EDITORIAL_REVIEW 01 e DONE — 2026-11-03 (sessão 5)
+
+- `review-24`: 0 crítico, 0 alto, 1 médio aberto (`sanitiza` em bytes trunca caminhos com
+  caracteres multibyte na nota de ambiguidade e no diagnóstico). Saída do loop técnico.
+- `editorial-review-01`, incremental desde `4ced739`: 0 crítico, 0 alto, 1 médio e 2 baixo
+  abertos (contrato do `SessionStart` sem a distinção `nucleo`/`fase`, "por isso" dos
+  READMEs, comentário da rede de segurança). Saída do loop editorial.
+- `DONE`: `npm test` 178/178; publicação `0.2.0` registrada e conferida (sha256
+  `9c9daffe8881`). A pedido do usuário, merge na `main` e push.
